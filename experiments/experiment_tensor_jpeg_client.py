@@ -24,7 +24,7 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 10
+N_frame = 100
 
 test_case = "tensor_jpeg"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
@@ -181,11 +181,11 @@ if __name__ == "__main__":
             time.sleep(1)
         
 
-        for i in range(1):
+        for i in range(5):
             print("In iter",i)
             frame_predicts = []
             thresh = 0.05
-            quality =100 #60+10*i
+            quality =60+10*i
 
             sf = SplitFramework(device="cuda")
             sf.set_reference_tensor(dummy_head_tensor)
@@ -264,6 +264,8 @@ if __name__ == "__main__":
                     pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
                                 scores=tensor(detection[0].numpy()[:,4]),
                                 labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
+                else:
+                    pred = dict()
                 frame_predicts.append(pred)
             metric = MeanAveragePrecision(iou_type="bbox") 
             metric.update(frame_predicts, frame_labels[0:N_frame])
