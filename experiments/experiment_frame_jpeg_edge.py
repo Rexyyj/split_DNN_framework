@@ -17,6 +17,7 @@ import torch
 import pickle
 from split_framework.yolov3_tensor_jpeg import SplitFramework
 from torch.profiler import profile, record_function, ProfilerActivity
+import simplejpeg
 
 class TailModelService:
     exposed = True
@@ -34,35 +35,43 @@ class TailModelService:
         self.time_start = torch.cuda.Event(enable_timing=True)
         self.time_end = torch.cuda.Event(enable_timing=True)
     
+    def convert_rgb_frame_to_tensor(self, image):
+        img_size = 416
+        # Configure input
+        input_img = transforms.Compose([
+        DEFAULT_TRANSFORMS,
+        Resize(img_size)])(
+            (image, np.zeros((1, 5))))[0].unsqueeze(0)
+        input_img = input_img.cuda()
+
+        return input_img
 
     def POST(self, *uri):
         urilen = len(uri)
         if urilen != 0 :
             print(uri[0])
-        if uri[0] == "reset":
-            self.sf.set_reference_tensor(self.dummy_tensor)
-            response = {"reset_status":True}
-            return pickle.dumps(response)
         if uri[0] == "tensor_jpeg":
             body = cherrypy.request.body.read()
             data = pickle.loads(body)
             print("Processing: ",data["id"])
             decode_time = 0
-            tail_time = 0
+            model_time = 0
             ################## Perform Object detection #############################
             with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True) as prof:
                 with record_function("model_inference"):
                     with torch.no_grad():
                         ######## Framework decode ##########
                         self.time_start.record()
-                        reconstructed_head_tensor = self.sf.split_framework_decode(data)
+                        frame = simplejpeg.decode_jpeg(data["frame"])
+                        frame_tensor = self.convert_rgb_frame_to_tensor(frame)
                         self.time_end.record()
                         torch.cuda.synchronize()
                         decode_time = self.time_start.elapsed_time(self.time_end)
                         
                         ######## Framework decode ##########
                         self.time_start.record()
-                        inference_result = self.model(reconstructed_head_tensor,2)
+                        head_output = self.model(frame_tensor,1)
+                        inference_result = self.model(head_output,2)
                         detection = non_max_suppression(inference_result, 0.5, 0.5)
                         # print(detection)
                         self.time_end.record()
@@ -82,7 +91,7 @@ class TailModelService:
             cuda_mem= abs(float(mea[16]))/1000 if mea[17] =='Kb' else abs(float(mea[16]))
             ##################### Collect resource usage ##########################
             test_restult = {"id":data["id"], 
-                            "tail_time": tail_time,
+                            "model_time": tail_time,
                             "decode_time":decode_time,
                             "cpu_time":cpu_time,
                             "cuda_time":cuda_time,
