@@ -50,13 +50,57 @@ except:
         
 
 with open(map_output_path,'a') as f:
-    f.write("video_name,pruning_thresh,jepg_quality,map,map_50,map_75,map_small,map_medium,map_large,mar_1,mar_100,mar_small,mar_medium,mar_large\n")
+    title = ("video_name,"
+            "pruning_thresh,"
+            "jepg_quality,"
+            "map,"
+            "map_50,"
+            "map_75,"
+            "map_small,"
+            "map_medium,"
+            "map_large,"
+            "mar_1,"
+            "mar_100,"
+            "mar_small,"
+            "mar_medium,"
+            "mar_large\n")
+    f.write(title)
 
 with open(perf_output_path,'a') as f:
-    f.write("video_name,pruning_thresh,jepg_quality,snr_mean,snr_std,head_time_mean,head_time_std,framework_time_mean,framework_time_std,tail_time_mean,tail_time_std,data_size_mean,data_size_std\n")
+    title = ("video_name,"
+            "pruning_thresh,"
+            "jepg_quality,"
+            "snr_mean,"
+            "snr_std,"
+            "head_time_mean,"
+            "head_time_std,"
+            "framework_time_mean,"
+            "framework_time_std,"
+            "tail_time_mean,"
+            "tail_time_std\n")
+    f.write(title)
 
 with open(resource_output_path,'a') as f:
-    f.write("video_name,pruning_thresh,jepg_quality,cpu_cli_mean,cpu_cli_std,cpu_cli_mem_mean,cpu_cli_mem_std,cuda_cli_mem_mean,cuda_cli_mem_std\n")
+    title = ("video_name,"
+            "pruning_thresh,"
+            "jepg_quality,"
+            "data_size_mean,"
+            "data_size_std,"
+            "cpu_cli_mean,"
+            "cpu_cli_std,"
+            "cpu_cli_mem_mean,"
+            "cpu_cli_mem_std,"
+            "cuda_cli_mem_mean,"
+            "cuda_cli_mem_std,"
+            "cpu_edge_mean,"
+            "cpu_edge_std,"
+            "cuda_edge_mean,"
+            "cuda_edge_std,"
+            "cpu_edge_mem_mean,"
+            "cpu_edge_mem_std,"
+            "cuda_edge_mem_mean,"
+            "cuda_edge_mem_std\n")
+    f.write(title)
 ################################### Utility functions ###################################
 def convert_rgb_frame_to_tensor(image):
     img_size = 416
@@ -146,10 +190,15 @@ if __name__ == "__main__":
             sf.set_jpeg_quality(quality)
 
             ################## Init measurement lists ##########################
-            cpu_time = []
+            cpu_time_client = []
             # cuda_time =[]
-            cpu_mem = []
-            cuda_mem = []
+            cpu_mem_client = []
+            cuda_mem_client = []
+            cpu_time_edge = []
+            cuda_time_edge =[]
+            cpu_mem_edge = []
+            cuda_mem_edge = []
+            transfer_data_size =[]
             #####################################################################
             for index in range(len(test_frames)):
                 
@@ -161,15 +210,20 @@ if __name__ == "__main__":
                             frame_tensor = convert_rgb_frame_to_tensor(frame)
                             head_tensor = model(frame_tensor, 1)
                             data_to_trans = sf.split_framework_encode(index, head_tensor)
+                            transfer_data_size.append(len(data_to_trans))
                             r = requests.post(url=service_uri, data=data_to_trans)
                             response = pickle.loads(r.content)
                 ##################### Collect resource usage ##########################
                 resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
                 mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) ) 
-                cpu_time.append(float(str(mea[2]).replace("m","").replace("s","")))
+                cpu_time_client.append(float(str(mea[2]).replace("m","").replace("s","")))
                 # cuda_time.append(float(str(mea[8]).replace("m","").replace("s","")))
-                cpu_mem.append(abs(float(mea[8]))/1000 if mea[9]=='Kb' else abs(float(mea[8])))
-                cuda_mem.append(abs(float(mea[12]))/1000 if mea[13] =='Kb' else abs(float(mea[12])))
+                cpu_mem_client.append(abs(float(mea[8]))/1000 if mea[9]=='Kb' else abs(float(mea[8])))
+                cuda_mem_client.append(abs(float(mea[12]))/1000 if mea[13] =='Kb' else abs(float(mea[12])))
+                cpu_time_edge.append(response["cpu_time"])
+                cuda_time_edge.append(response["cuda_time"])
+                cpu_mem_edge.append(response["cpu_mem"])
+                cuda_mem_edge.append(response["cuda_mem"])
                 ##################### 
                 detection = response["detection"]
 
@@ -182,31 +236,41 @@ if __name__ == "__main__":
             metric.update(frame_predicts, frame_labels[0:N_frame])
             maps = metric.compute()
 
-        with open(map_output_path,'a') as f:
-            f.write(video_name+","
-                    +str(thresh)+","
-                    +str(quality)+","
-                    +str(maps["map"].item())+","
-                    +str(maps["map_50"].item())+","
-                    +str(maps["map_75"].item())+","
-                    +str(maps["map_small"].item())+","
-                    +str(maps["map_medium"].item())+","
-                    +str(maps["map_large"].item())+","
-                    +str(maps["mar_1"].item())+","
-                    +str(maps["mar_100"].item())+","
-                    +str(maps["mar_small"].item())+","
-                    +str(maps["mar_medium"].item())+","
-                    +str(maps["mar_large"].item())+"\n"
-                    )
-            
-        with open(resource_output_path,'a') as f:
-            f.write(video_name+","
-                    +str(thresh)+","
-                    +str(quality)+","
-                    +str(np.array(cpu_time).mean())+","
-                    +str(np.array(cpu_time).std())+","
-                    +str(np.array(cpu_mem).mean())+","
-                    +str(np.array(cpu_mem).std())+","
-                    +str(np.array(cuda_mem).mean())+","
-                    +str(np.array(cuda_mem).std())+"\n"
-            )
+            with open(map_output_path,'a') as f:
+                f.write(video_name+","
+                        +str(thresh)+","
+                        +str(quality)+","
+                        +str(maps["map"].item())+","
+                        +str(maps["map_50"].item())+","
+                        +str(maps["map_75"].item())+","
+                        +str(maps["map_small"].item())+","
+                        +str(maps["map_medium"].item())+","
+                        +str(maps["map_large"].item())+","
+                        +str(maps["mar_1"].item())+","
+                        +str(maps["mar_100"].item())+","
+                        +str(maps["mar_small"].item())+","
+                        +str(maps["mar_medium"].item())+","
+                        +str(maps["mar_large"].item())+"\n"
+                        )
+                
+            with open(resource_output_path,'a') as f:
+                f.write(video_name+","
+                        +str(thresh)+","
+                        +str(quality)+","
+                        +str(np.array(transfer_data_size).mean())+","
+                        +str(np.array(transfer_data_size).std())+","
+                        +str(np.array(cpu_time_client).mean())+","
+                        +str(np.array(cpu_time_client).std())+","
+                        +str(np.array(cpu_mem_client).mean())+","
+                        +str(np.array(cpu_mem_client).std())+","
+                        +str(np.array(cuda_mem_client).mean())+","
+                        +str(np.array(cuda_mem_client).std())+","
+                        +str(np.array(cpu_time_edge).mean())+","
+                        +str(np.array(cpu_time_edge).std())+","
+                        +str(np.array(cuda_time_edge).mean())+","
+                        +str(np.array(cuda_time_edge).std())+","
+                        +str(np.array(cpu_mem_edge).mean())+","
+                        +str(np.array(cpu_mem_edge).std())+","
+                        +str(np.array(cuda_mem_edge).mean())+","
+                        +str(np.array(cuda_mem_edge).std())+"\n"
+                )
