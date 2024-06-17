@@ -50,7 +50,7 @@ class TailModelService:
         urilen = len(uri)
         if urilen != 0 :
             print(uri[0])
-        if uri[0] == "tensor_jpeg":
+        if uri[0] == "frame_jpeg":
             body = cherrypy.request.body.read()
             data = pickle.loads(body)
             print("Processing: ",data["id"])
