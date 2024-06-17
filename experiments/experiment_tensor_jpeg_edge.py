@@ -16,7 +16,7 @@ import time
 import torch
 import pickle
 from split_framework.yolov3_tensor_jpeg import SplitFramework
-
+from torch.profiler import profile, record_function, ProfilerActivity
 
 class TailModelService:
     exposed = True
@@ -48,17 +48,23 @@ class TailModelService:
             data = pickle.loads(body)
             print("Processing: ",data["id"])
             tail_time = 0
-            with torch.no_grad():
-                self.time_start.record()
-                
-                reconstructed_head_tensor = self.sf.split_framework_decode(data)
+            ################## Perform Object detection #############################
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True) as prof:
+                with record_function("model_inference"):
+                    with torch.no_grad():
+                        self.time_start.record()
+                        reconstructed_head_tensor = self.sf.split_framework_decode(data)
 
-                inference_result = self.model(reconstructed_head_tensor,2)
-                detection = non_max_suppression(inference_result, 0.5, 0.5)
-                print(detection)
-                self.time_end.record()
-                torch.cuda.synchronize()
-                tail_time = self.time_start.elapsed_time(self.time_end)
+                        inference_result = self.model(reconstructed_head_tensor,2)
+                        detection = non_max_suppression(inference_result, 0.5, 0.5)
+                        print(detection)
+                        self.time_end.record()
+                        torch.cuda.synchronize()
+                        tail_time = self.time_start.elapsed_time(self.time_end)
+            ##################### Collect resource usage ##########################
+            resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
+            print(resource_mea)
+            ##################### Collect resource usage ##########################
             test_restult = {"id":data["id"], "tail_time": tail_time, "detection":detection }
             return pickle.dumps(test_restult)
 
