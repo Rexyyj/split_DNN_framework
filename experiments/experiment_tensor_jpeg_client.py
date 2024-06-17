@@ -121,7 +121,7 @@ def object_detection(id, model, frame,framework, tail_model_address):
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../config/yolov3-tiny.cfg","../weights/yolov3-tiny.weights")
+    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     

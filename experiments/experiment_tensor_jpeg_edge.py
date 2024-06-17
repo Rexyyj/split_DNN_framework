@@ -24,8 +24,8 @@ class TailModelService:
     @cherrypy.tools.accept(media='text/plain')
     def __init__(self, split_layer,split_framework) -> None:
         self.model = models_split_tiny.load_model(
-            "../config/yolov3-tiny.cfg",
-            "../weights/yolov3-tiny.weights")
+            "../pytorchyolo/config/yolov3-tiny.cfg",
+            "../pytorchyolo/weights/yolov3-tiny.weights")
         self.model.set_split_layer(split_layer) # layer <7
         self.model = self.model.eval()
         self.sf = split_framework
