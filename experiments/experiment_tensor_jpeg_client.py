@@ -33,7 +33,7 @@ reset_uri = "http://10.0.1.23:8090/reset"
 log_dir = "../measurements/"
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
-perf_output_path = measurement_path+ "time.csv"
+time_output_path = measurement_path+ "time.csv"
 resource_output_path = measurement_path+"resource.csv"
 
 model_split_layer = 7
@@ -66,18 +66,21 @@ with open(map_output_path,'a') as f:
             "mar_large\n")
     f.write(title)
 
-with open(perf_output_path,'a') as f:
+with open(time_output_path,'a') as f:
     title = ("video_name,"
             "pruning_thresh,"
             "jepg_quality,"
-            "snr_mean,"
-            "snr_std,"
             "head_time_mean,"
             "head_time_std,"
-            "framework_time_mean,"
-            "framework_time_std,"
             "tail_time_mean,"
-            "tail_time_std\n")
+            "tail_time_std,"
+            "encode_time_mean,"
+            "encode_time_std,"
+            "decode_time_mean,"
+            "decode_time_std,"
+            "request_time_mean,"
+            "request_time_std\n"
+            )
     f.write(title)
 
 with open(resource_output_path,'a') as f:
@@ -189,6 +192,8 @@ if __name__ == "__main__":
             sf.set_pruning_threshold(thresh)
             sf.set_jpeg_quality(quality)
 
+            time_start = torch.cuda.Event(enable_timing=True)
+            time_end = torch.cuda.Event(enable_timing=True)
             ################## Init measurement lists ##########################
             cpu_time_client = []
             # cuda_time =[]
@@ -199,6 +204,12 @@ if __name__ == "__main__":
             cpu_mem_edge = []
             cuda_mem_edge = []
             transfer_data_size =[]
+
+            head_time =[]
+            tail_time =[]
+            encode_time=[]
+            decode_time=[]
+            request_time=[]
             #####################################################################
             for index in range(len(test_frames)):
                 
@@ -207,12 +218,32 @@ if __name__ == "__main__":
                 with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True) as prof:
                     with record_function("model_inference"):
                         with torch.no_grad():
+                            ##### Head Model #####
+                            time_start.record()
                             frame_tensor = convert_rgb_frame_to_tensor(frame)
                             head_tensor = model(frame_tensor, 1)
+                            time_end.record()
+                            torch.cuda.synchronize()
+                            head_time.append(time_start.elapsed_time(time_end))
+                            ##### Head Model #####
+                        
+                            ##### Framework Encoding #####
+                            time_start.record()
                             data_to_trans = sf.split_framework_encode(index, head_tensor)
+                            time_end.record()
+                            torch.cuda.synchronize()
+                            encode_time.append(time_start.elapsed_time(time_end))
                             transfer_data_size.append(len(data_to_trans))
+                            ##### Framework Encoding #####
+
+                            ##### Send request #####
+                            time_start.record()
                             r = requests.post(url=service_uri, data=data_to_trans)
                             response = pickle.loads(r.content)
+                            time_end.record()
+                            torch.cuda.synchronize()
+                            request_time.append(time_start.elapsed_time(time_end))
+                            ##### Send request #####
                 ##################### Collect resource usage ##########################
                 resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
                 mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) ) 
@@ -224,6 +255,8 @@ if __name__ == "__main__":
                 cuda_time_edge.append(response["cuda_time"])
                 cpu_mem_edge.append(response["cpu_mem"])
                 cuda_mem_edge.append(response["cuda_mem"])
+                tail_time.append(response["tail_time"])
+                decode_time.append(response["decode_time"])
                 ##################### 
                 detection = response["detection"]
 
@@ -252,6 +285,22 @@ if __name__ == "__main__":
                         +str(maps["mar_medium"].item())+","
                         +str(maps["mar_large"].item())+"\n"
                         )
+                
+            with open(time_output_path,'a') as f:
+                f.write(video_name+","
+                        +str(thresh)+","
+                        +str(quality)+","
+                        +str(np.array(head_time).mean())+","
+                        +str(np.array(head_time).std())+","
+                        +str(np.array(tail_time).mean())+","
+                        +str(np.array(tail_time).std())+","
+                        +str(np.array(encode_time).mean())+","
+                        +str(np.array(encode_time).std())+","
+                        +str(np.array(decode_time).mean())+","
+                        +str(np.array(decode_time).std())+","
+                        +str(np.array(request_time).mean())+","
+                        +str(np.array(request_time).std())+"\n"
+                )
                 
             with open(resource_output_path,'a') as f:
                 f.write(video_name+","
