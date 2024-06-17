@@ -24,7 +24,7 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 100
+N_frame = 10
 
 test_case = "tensor_jpeg"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
@@ -170,19 +170,19 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        reset_required = True
-        while reset_required:
-            r = requests.post(url=reset_uri)
-            result = pickle.loads(r.content)
-            if result["reset_status"] == True:
-                reset_required = False
-            else:
-                print("Reset edge reference tensor failed...")
-            time.sleep(1)
-        
-
         for i in range(5):
             print("In iter",i)
+            reset_required = True
+            while reset_required:
+                r = requests.post(url=reset_uri)
+                result = pickle.loads(r.content)
+                if result["reset_status"] == True:
+                    reset_required = False
+                else:
+                    print("Reset edge reference tensor failed...")
+                time.sleep(1)
+
+            
             frame_predicts = []
             thresh = 0.05
             quality =60+10*i
