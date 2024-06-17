@@ -24,7 +24,7 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 10
+N_frame = 100
 
 test_case = "frame_jpeg"
 service_uri = "http://10.0.1.23:8090/frame_jpeg"
@@ -151,12 +151,12 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for i in range(1):
+        for i in range(5):
             print("In iter",i)
 
             frame_predicts = []
             # thresh = 0.05
-            quality =100#60+10*i
+            quality =60+10*i
 
             time_start = torch.cuda.Event(enable_timing=True)
             time_end = torch.cuda.Event(enable_timing=True)

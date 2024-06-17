@@ -24,7 +24,7 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 10
+N_frame = 100
 
 test_case = "frame_local"
 

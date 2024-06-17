@@ -79,8 +79,11 @@ class TailModelService:
                         tail_time = self.time_start.elapsed_time(self.time_end)
             ##################### Collect resource usage ##########################
             resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
-            mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) ) 
-            cpu_time=float(str(mea[2]).replace("m","").replace("s",""))
+            mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) )
+            try: 
+                cpu_time=float(str(mea[2]).replace("m","").replace("s",""))
+            except:
+                cpu_time=float(str(mea[2]).replace("u","").replace("s",""))/1e3
             cuda_time=float(str(mea[8]).replace("m","").replace("s",""))
             if mea[13]=='b':
                 cpu_mem = abs(float(mea[12]))/1e6
