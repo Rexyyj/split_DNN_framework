@@ -41,7 +41,7 @@ class TailModelService:
             print(uri[0])
         if uri[0] == "reset":
             self.sf.set_reference_tensor(self.dummy_tensor)
-            response = {"rest_status":True}
+            response = {"reset_status":True}
             return pickle.dumps(response)
         if uri[0] == "tensor_jpeg":
             body = cherrypy.request.body.read()

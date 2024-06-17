@@ -136,7 +136,7 @@ if __name__ == "__main__":
         while reset_required:
             r = requests.post(url=reset_uri)
             result = pickle.loads(r.content)
-            if result["reset_statuf"] == True:
+            if result["reset_status"] == True:
                 reset_required = False
             else:
                 print("Reset edge reference tensor failed...")
