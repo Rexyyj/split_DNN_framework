@@ -17,6 +17,8 @@ from torch import tensor
 from split_framework.yolov3_tensor_jpeg import SplitFramework
 import requests
 import pickle
+from torchmetrics.detection import MeanAveragePrecision
+from torch.profiler import profile, record_function, ProfilerActivity
 ################################### Varialbe init ###################################
 video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
@@ -48,12 +50,13 @@ except:
         
 
 with open(map_output_path,'a') as f:
-    f.write("video_name,pruning_thresh,jepg_quality,map,map_50,map_75,map_small,map_medium, ap_large,mar_1,mar_100,mar_small,mar_medium,mar_large\n")
+    f.write("video_name,pruning_thresh,jepg_quality,map,map_50,map_75,map_small,map_medium,map_large,mar_1,mar_100,mar_small,mar_medium,mar_large\n")
 
 with open(perf_output_path,'a') as f:
     f.write("video_name,pruning_thresh,jepg_quality,snr_mean,snr_std,head_time_mean,head_time_std,framework_time_mean,framework_time_std,tail_time_mean,tail_time_std,data_size_mean,data_size_std\n")
+
 with open(resource_output_path,'a') as f:
-    f.write("video_name,pruning_thresh,jepg_quality,cpu_total_mean,cpu_total_std,cuda_total_mean,cuda_total_std,cpu_mem_mean,cpu_mem_std,cuda_mem_mean,cuda_mem_std\n")
+    f.write("video_name,pruning_thresh,jepg_quality,cpu_cli_mean,cpu_cli_std,cpu_cli_mem_mean,cpu_cli_mem_std,cuda_cli_mem_mean,cuda_cli_mem_std\n")
 ################################### Utility functions ###################################
 def convert_rgb_frame_to_tensor(image):
     img_size = 416
@@ -106,18 +109,6 @@ def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number
     print("Load total number of video frames: ", len(test_frames))
     return test_frames
 
-def object_detection(id, model, frame,framework, tail_model_address):
-    with torch.no_grad():
-        # Execute head model
-    
-        tensor = convert_rgb_frame_to_tensor(frame)
-        head_tensor = model(tensor, 1)
-        data_to_trans = framework.split_framework_encode(id, head_tensor)
-
-        r = requests.post(url=tail_model_address, data=data_to_trans)
-        result = pickle.loads(r.content)
-        
-    return result["detection"]
 ################################### Main function ###################################
 
 if __name__ == "__main__":
@@ -154,8 +145,68 @@ if __name__ == "__main__":
             sf.set_pruning_threshold(thresh)
             sf.set_jpeg_quality(quality)
 
+            ################## Init measurement lists ##########################
+            cpu_time = []
+            # cuda_time =[]
+            cpu_mem = []
+            cuda_mem = []
+            #####################################################################
             for index in range(len(test_frames)):
+                
                 frame = test_frames[index]
+                ################## Perform Object detection #############################
+                with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True) as prof:
+                    with record_function("model_inference"):
+                        with torch.no_grad():
+                            frame_tensor = convert_rgb_frame_to_tensor(frame)
+                            head_tensor = model(frame_tensor, 1)
+                            data_to_trans = sf.split_framework_encode(index, head_tensor)
+                            r = requests.post(url=service_uri, data=data_to_trans)
+                            response = pickle.loads(r.content)
+                ##################### Collect resource usage ##########################
+                resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
+                mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) ) 
+                cpu_time.append(float(str(mea[2]).replace("m","").replace("s","")))
+                # cuda_time.append(float(str(mea[8]).replace("m","").replace("s","")))
+                cpu_mem.append(abs(float(mea[8]))/1000 if mea[9]=='Kb' else abs(float(mea[8])))
+                cuda_mem.append(abs(float(mea[12]))/1000 if mea[13] =='Kb' else abs(float(mea[12])))
+                ##################### 
+                detection = response["detection"]
 
-                detection = object_detection(index,model,frame,sf,service_uri)
-                print(detection)
+                if len(detection[0])!= 0:
+                    pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
+                                scores=tensor(detection[0].numpy()[:,4]),
+                                labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
+                frame_predicts.append(pred)
+            metric = MeanAveragePrecision(iou_type="bbox") 
+            metric.update(frame_predicts, frame_labels[0:N_frame])
+            maps = metric.compute()
+
+        with open(map_output_path,'a') as f:
+            f.write(video_name+","
+                    +str(thresh)+","
+                    +str(quality)+","
+                    +str(maps["map"].item())+","
+                    +str(maps["map_50"].item())+","
+                    +str(maps["map_75"].item())+","
+                    +str(maps["map_small"].item())+","
+                    +str(maps["map_medium"].item())+","
+                    +str(maps["map_large"].item())+","
+                    +str(maps["mar_1"].item())+","
+                    +str(maps["mar_100"].item())+","
+                    +str(maps["mar_small"].item())+","
+                    +str(maps["mar_medium"].item())+","
+                    +str(maps["mar_large"].item())+"\n"
+                    )
+            
+        with open(resource_output_path,'a') as f:
+            f.write(video_name+","
+                    +str(thresh)+","
+                    +str(quality)+","
+                    +str(np.array(cpu_time).mean())+","
+                    +str(np.array(cpu_time).std())+","
+                    +str(np.array(cpu_mem).mean())+","
+                    +str(np.array(cpu_mem).std())+","
+                    +str(np.array(cuda_mem).mean())+","
+                    +str(np.array(cuda_mem).std())+"\n"
+            )
