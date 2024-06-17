@@ -87,8 +87,6 @@ with open(resource_output_path,'a') as f:
             "cpu_cli_std,"
             "cpu_cli_mem_mean,"
             "cpu_cli_mem_std,"
-            "cuda_cli_mem_mean,"
-            "cuda_cli_mem_std,"
             "cpu_edge_mean,"
             "cpu_edge_std,"
             "cuda_edge_mean,"
@@ -166,7 +164,7 @@ if __name__ == "__main__":
             cpu_time_client = []
             # cuda_time =[]
             cpu_mem_client = []
-            cuda_mem_client = []
+            # cuda_mem_client = []
             cpu_time_edge = []
             cuda_time_edge =[]
             cpu_mem_edge = []
@@ -211,7 +209,6 @@ if __name__ == "__main__":
                 cpu_time_client.append(float(str(mea[2]).replace("m","").replace("s","")))
                 # cuda_time.append(float(str(mea[8]).replace("m","").replace("s","")))
                 cpu_mem_client.append(abs(float(mea[8]))/1000 if mea[9]=='Kb' else abs(float(mea[8])))
-                cuda_mem_client.append(abs(float(mea[12]))/1000 if mea[13] =='Kb' else abs(float(mea[12])))
                 cpu_time_edge.append(response["cpu_time"])
                 cuda_time_edge.append(response["cuda_time"])
                 cpu_mem_edge.append(response["cpu_mem"])
@@ -272,8 +269,6 @@ if __name__ == "__main__":
                         +str(np.array(cpu_time_client).std())+","
                         +str(np.array(cpu_mem_client).mean())+","
                         +str(np.array(cpu_mem_client).std())+","
-                        +str(np.array(cuda_mem_client).mean())+","
-                        +str(np.array(cuda_mem_client).std())+","
                         +str(np.array(cpu_time_edge).mean())+","
                         +str(np.array(cpu_time_edge).std())+","
                         +str(np.array(cuda_time_edge).mean())+","
