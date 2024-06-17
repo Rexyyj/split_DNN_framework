@@ -1,1 +1,4 @@
 dataset/
+*.weights
+*.74
+__pycache__/
