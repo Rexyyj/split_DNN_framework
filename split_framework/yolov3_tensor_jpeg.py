@@ -109,8 +109,7 @@ class SplitFramework():
 
         return pickle.dumps(payload)
 
-    def split_framework_decode(self,payload):
-        tensor_dict = pickle.loads(payload)
+    def split_framework_decode(self,tensor_dict):
         reconstructed_tensor = self.jpeg_decode(tensor_dict)
         reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
         self.reference_tensor = reconstructed_head_tensor
