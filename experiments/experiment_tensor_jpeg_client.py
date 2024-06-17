@@ -265,7 +265,9 @@ if __name__ == "__main__":
                                 scores=tensor(detection[0].numpy()[:,4]),
                                 labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
                 else:
-                    pred = dict()
+                    pred = dict(boxes=tensor([]),
+                                scores=tensor([]),
+                                labels=tensor([],dtype=torch.int32),)
                 frame_predicts.append(pred)
             metric = MeanAveragePrecision(iou_type="bbox") 
             metric.update(frame_predicts, frame_labels[0:N_frame])
