@@ -25,7 +25,8 @@ video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 10
 
 test_case = "tensor_jpeg"
-service_path = "http://10.0.1.23:8090/jpeg_tensor"
+service_uri = "http://10.0.1.23:8090/tensor_jpeg"
+reset_uri = "http://10.0.1.23:8090/reset"
 
 log_dir = "../measurements/"
 measurement_path = log_dir+test_case+"/"
@@ -82,7 +83,7 @@ def load_ground_truth(video_name):
     return frame_labels
 
 def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number = -1 to load all frames
-    video_path = video_dir +video_name
+    video_path = video_dir +video_name +".mov"
 
     test_frames = []
 
@@ -131,11 +132,22 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
+        reset_required = True
+        while reset_required:
+            r = requests.post(url=reset_uri)
+            result = pickle.loads(r.content)
+            if result["reset_statuf"] == True:
+                reset_required = False
+            else:
+                print("Reset edge reference tensor failed...")
+            time.sleep(1)
+        
+
         for i in range(1):
             print("In iter",i)
             frame_predicts = []
             thresh = 0.05
-            quality = 60+10*i
+            quality =100 #60+10*i
 
             sf = SplitFramework(device="cuda")
             sf.set_reference_tensor(dummy_head_tensor)
@@ -144,6 +156,6 @@ if __name__ == "__main__":
 
             for index in range(len(test_frames)):
                 frame = test_frames[index]
-                frame = convert_rgb_frame_to_tensor(frame)
-                detection = object_detection(frame)
+
+                detection = object_detection(index,model,frame,sf,service_uri)
                 print(detection)
