@@ -6,7 +6,25 @@ import numpy as np
 import torch
 import simplejpeg
 import pickle
+import torch.nn as nn
 ################################### class definition ###################################
+
+class RegressionNN(nn.Module):
+    def __init__(self, input_size, output_size):
+        super(RegressionNN, self).__init__()
+        self.fc1 = nn.Linear(input_size, 128)  # First layer
+        self.fcs = nn.ModuleList([nn.Linear(128, 128) for _ in range(5)])  # Correct way to add layers in a loop
+
+
+        self.fc_out = nn.Linear(128, output_size)  # Output layer
+        self.relu = nn.ReLU()  # Activation function
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        for layer in self.fcs:  # Iterating over registered modules
+            x = self.relu(layer(x))  # Applying non-linearity after each hidden layer
+        x = self.fc_out(x)
+        return x
 
 class SplitFramework():
 
@@ -29,6 +47,21 @@ class SplitFramework():
         self.start_event = torch.cuda.Event(enable_timing=True)
         self.end_event = torch.cuda.Event(enable_timing=True)
 
+        # Regression params
+        self.input_size = 676
+        self.output_size = 3
+        self.encoding_model_path = '../split_framework/ckpts/l1_loss_norm.pth'
+        # Load model
+        self.encode_model = RegressionNN(self.input_size, self.output_size)
+        self.encode_model.load_state_dict(torch.load(self.encoding_model_path))
+        self.encode_model.eval().to('cuda')
+        index_base = np.arange(0,676)/676
+        index = torch.zeros(128,676, device="cuda")
+        for i in range(128):
+            index[i] = torch.from_numpy(index_base)
+        powers = torch.arange(3 - 1, -1, -1, device="cuda")
+        self.index_powers = index.unsqueeze(2) ** powers  # Shape: [128, 676, 3]
+
 
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape
@@ -39,8 +72,6 @@ class SplitFramework():
     def set_pruning_threshold(self, threshold):
         self.pruning_threshold = threshold
     
-    def set_jpeg_quality(self, quality):
-        self.jpeg_quality =  quality
 
     def calculate_snr(self,original_signal, reconstructed_signal):
         # Calculate the noise signal
@@ -57,33 +88,48 @@ class SplitFramework():
         
         return SNR_dB
     
-    def jpeg_encode(self,tensor):
-        # Normalize & Quantize Config
-        normalize_base =torch.abs(tensor).max()
-        tensor_normal = tensor / normalize_base
-        scale, zero_point = (tensor_normal.max()-tensor_normal.min())/255,127
-        dtype = torch.quint8
-
-        tensor_normal = torch.quantize_per_tensor(tensor_normal, scale, zero_point, dtype)
-        tensor_normal = tensor_normal.int_repr()
-        tensor_normal = tensor_normal.to(torch.uint8).reshape((self.tensor_shape[1],self.tensor_shape[2]*self.tensor_shape[3],1))
-
-        # JPEG encoding/decoding
-        encoded_data = simplejpeg.encode_jpeg(tensor_normal.cpu().numpy().astype(np.uint8),self.jpeg_quality,'GRAY')
-        # self.data_size.append(transfer_data.shape[0])
-        decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded_data,"GRAY")).to(self.device)
+    def encode_bool_tensor_to_byte(self, tensor):
+        tensor = tensor.reshape(128*26*26)
+        numpy_array = tensor.numpy().astype(np.bool_)
+        # Pack the NumPy array into bytes
+        encoded_bytes = np.packbits(numpy_array).tobytes()
+        return encoded_bytes
+    
+    def decode_byte_to_bool_tensor(self,encoded_bytes: bytes, length: int):
+        # Decode the bytes back to a NumPy array
+        unpacked_array = np.unpackbits(np.frombuffer(encoded_bytes, dtype=np.uint8))
+        # Truncate the array to the original length (if necessary)
+        unpacked_array = unpacked_array[:length]
+        # Convert the NumPy array back to a PyTorch boolean tensor
+        decoded_tensor = torch.tensor(unpacked_array, dtype=torch.bool)
         
-        # # Reconstruct diff tensor
-        reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
-        reconstructed_tensor = (reconstructed_tensor.to(torch.float)-zero_point) * scale * normalize_base
-        # snr = self.calculate_snr(reconstructed_tensor.reshape(self.tensor_size).cpu().numpy() , tensor.reshape(self.tensor_size).cpu().numpy())
-        # self.reconstruct_error.append(snr)
-        return normalize_base, scale,zero_point, encoded_data, reconstructed_tensor
+        return decoded_tensor
 
-    def jpeg_decode(self, tensor_dict):
-        decoded_data =decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(tensor_dict["encoded"],"GRAY")).to(self.device)
-        reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
-        reconstructed_tensor = (reconstructed_tensor.to(torch.float)-tensor_dict["zero"]) * tensor_dict["scale"] * tensor_dict["normal"]
+    
+    def regression_encode(self,tensor):
+        # Normalize & Quantize Config
+        tensor_reshaped = tensor.reshape([128,676])
+        coffe = self.encode_model(tensor_reshaped)
+        zero_mask = tensor_reshaped==0
+        negative_mask = tensor_reshaped<0
+
+        reconstructed_tensor = torch.matmul(self.index_powers, coffe.unsqueeze(2)).squeeze(2)
+        reconstructed_tensor[zero_mask] =0
+        reconstructed_tensor[negative_mask] = -reconstructed_tensor[negative_mask]
+        reconstructed_tensor = reconstructed_tensor.reshape([1,128,26,26])
+
+        zero_mask_bytes = self.encode_bool_tensor_to_byte(zero_mask.reshape(128*26*26))
+        negative_mask_bytes = self.encode_bool_tensor_to_byte(negative_mask.reshape(128*26*26))
+
+        return zero_mask_bytes, negative_mask_bytes, coffe, reconstructed_tensor
+
+    def regression_decode(self, tensor_dict):
+        zero_mask = self.decode_byte_to_bool_tensor(tensor_dict["zero_mask"], 128*26*26)
+        negative_mask = self.decode_byte_to_bool_tensor(tensor_dict["negative_mask"], 128*26*26)
+        reconstructed_tensor = torch.matmul(self.index_powers, tensor_dict["coffe"].unsqueeze(2)).squeeze(2)
+        reconstructed_tensor[zero_mask] =0
+        reconstructed_tensor[negative_mask] = -reconstructed_tensor[negative_mask]
+        reconstructed_tensor = reconstructed_tensor.reshape([1,128,26,26])
         return reconstructed_tensor
 
     def split_framework_encode(self,id, head_tensor):
@@ -95,14 +141,13 @@ class SplitFramework():
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
 
-            normalize_base, scale,zero_point, encoded_data, reconstructed_tensor = self.jpeg_encode(pruned_tensor)
+            zero_mask, negative_mask,coffe, reconstructed_tensor = self.regression_encode(pruned_tensor)
 
             payload = {
                 "id" : id,
-                "normal": normalize_base,
-                "scale":scale,
-                "zero": zero_point,
-                "encoded": encoded_data
+                "zero_mask": zero_mask,
+                "negative_mask":negative_mask,
+                "coffe": coffe,
             }
             # updte the reference tensor
             self.reference_tensor = self.reference_tensor + reconstructed_tensor
