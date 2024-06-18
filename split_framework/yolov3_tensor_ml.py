@@ -90,7 +90,7 @@ class SplitFramework():
     
     def encode_bool_tensor_to_byte(self, tensor):
         tensor = tensor.reshape(128*26*26)
-        numpy_array = tensor.numpy().astype(np.bool_)
+        numpy_array = tensor.cpu().numpy().astype(np.bool_)
         # Pack the NumPy array into bytes
         encoded_bytes = np.packbits(numpy_array).tobytes()
         return encoded_bytes
@@ -155,7 +155,7 @@ class SplitFramework():
         return pickle.dumps(payload)
 
     def split_framework_decode(self,tensor_dict):
-        reconstructed_tensor = self.jpeg_decode(tensor_dict)
+        reconstructed_tensor = self.regression_decode(tensor_dict)
         reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
         self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
