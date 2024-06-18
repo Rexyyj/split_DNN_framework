@@ -125,7 +125,9 @@ class SplitFramework():
 
     def regression_decode(self, tensor_dict):
         zero_mask = self.decode_byte_to_bool_tensor(tensor_dict["zero_mask"], 128*26*26)
+        zero_mask = zero_mask.reshape([128,676])
         negative_mask = self.decode_byte_to_bool_tensor(tensor_dict["negative_mask"], 128*26*26)
+        negative_mask = negative_mask.reshape([128,676])
         reconstructed_tensor = torch.matmul(self.index_powers, tensor_dict["coffe"].unsqueeze(2)).squeeze(2)
         reconstructed_tensor[zero_mask] =0
         reconstructed_tensor[negative_mask] = -reconstructed_tensor[negative_mask]
