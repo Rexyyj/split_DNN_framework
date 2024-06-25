@@ -26,9 +26,6 @@ class SplitFramework():
         self.head_time =[]
         self.framework_time = []
         self.tail_time = []
-        self.start_event = torch.cuda.Event(enable_timing=True)
-        self.end_event = torch.cuda.Event(enable_timing=True)
-
 
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape

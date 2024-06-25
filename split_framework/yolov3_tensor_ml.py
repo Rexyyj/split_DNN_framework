@@ -44,8 +44,6 @@ class SplitFramework():
         self.head_time =[]
         self.framework_time = []
         self.tail_time = []
-        self.start_event = torch.cuda.Event(enable_timing=True)
-        self.end_event = torch.cuda.Event(enable_timing=True)
 
         # Regression params
         self.input_size = 676
