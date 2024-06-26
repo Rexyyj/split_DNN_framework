@@ -14,11 +14,11 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
+from split_framework.yolov3_tensor_jpeg import SplitFramework
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
 from torch.profiler import profile, record_function, ProfilerActivity
-import simplejpeg
 ################################### Varialbe init ###################################
 video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
@@ -26,14 +26,12 @@ video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 100
 
-test_case = "frame_jpeg"
-service_uri = "http://10.0.1.23:8090/frame_jpeg"
+test_case = "frame_local"
 
 log_dir = "../measurements/"
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
-resource_output_path = measurement_path+"resource.csv"
 
 model_split_layer = 7
 dummy_head_tensor = torch.rand([1,128,26,26])
@@ -50,7 +48,6 @@ except:
 
 with open(map_output_path,'a') as f:
     title = ("video_name,"
-            "jepg_quality,"
             "map,"
             "map_50,"
             "map_75,"
@@ -66,37 +63,23 @@ with open(map_output_path,'a') as f:
 
 with open(time_output_path,'a') as f:
     title = ("video_name,"
-            "jepg_quality,"
             "model_time_mean,"
-            "model_time_std,"
-            "encode_time_mean,"
-            "encode_time_std,"
-            "decode_time_mean,"
-            "decode_time_std,"
-            "request_time_mean,"
-            "request_time_std\n"
+            "model_time_std\n"
             )
     f.write(title)
 
-with open(resource_output_path,'a') as f:
-    title = ("video_name,"
-            "jepg_quality,"
-            "data_size_mean,"
-            "data_size_std,"
-            "cpu_cli_mean,"
-            "cpu_cli_std,"
-            "cpu_cli_mem_mean,"
-            "cpu_cli_mem_std,"
-            "cpu_edge_mean,"
-            "cpu_edge_std,"
-            "cuda_edge_mean,"
-            "cuda_edge_std,"
-            "cpu_edge_mem_mean,"
-            "cpu_edge_mem_std,"
-            "cuda_edge_mem_mean,"
-            "cuda_edge_mem_std\n")
-    f.write(title)
 ################################### Utility functions ###################################
+def convert_rgb_frame_to_tensor(image):
+    img_size = 416
+    # Configure input
+    input_img = transforms.Compose([
+    DEFAULT_TRANSFORMS,
+    Resize(img_size)])(
+        (image, np.zeros((1, 5))))[0].unsqueeze(0)
+    input_img = input_img.cuda()
+
+    return input_img
+
 def load_ground_truth(video_name):
     frame_labels = []
     df_gt = pd.read_csv(label_path+video_name+".csv")
@@ -151,12 +134,12 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for i in range(5):
+        for i in range(1):
             print("In iter",i)
+            reset_required = True
 
             frame_predicts = []
-            # thresh = 0.05
-            quality =60+10*i
+
 
             time_start = torch.cuda.Event(enable_timing=True)
             time_end = torch.cuda.Event(enable_timing=True)
@@ -164,59 +147,29 @@ if __name__ == "__main__":
             cpu_time_client = []
             # cuda_time =[]
             cpu_mem_client = []
-            # cuda_mem_client = []
-            cpu_time_edge = []
-            cuda_time_edge =[]
-            cpu_mem_edge = []
-            cuda_mem_edge = []
-            transfer_data_size =[]
+            cuda_mem_client = []
 
             model_time =[]
-            encode_time=[]
-            decode_time=[]
-            request_time=[]
+
             #####################################################################
             for index in range(len(test_frames)):
                 
                 frame = test_frames[index]
                 ################## Perform Object detection #############################
-                with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True) as prof:
-                    with record_function("model_inference"):
-                        with torch.no_grad():
+                with torch.no_grad():
+                    ##### Model #####
+                    time_start.record()
+                    frame_tensor = convert_rgb_frame_to_tensor(frame)
+                    head_tensor = model(frame_tensor, 1)
+                    inference_result = model(head_tensor,2)
+                    detection = non_max_suppression(inference_result, 0.5, 0.5)
+                    time_end.record()
+                    torch.cuda.synchronize()
+                    model_time.append(time_start.elapsed_time(time_end))
+                    ##### Model #####
                         
-                            #####  Encoding #####
-                            time_start.record()
-                            encoded_data = simplejpeg.encode_jpeg(frame,quality)
-                            payload = {"id":index, "frame":encoded_data}
-                            data_to_trans =  pickle.dumps(payload)
-                            time_end.record()
-                            torch.cuda.synchronize()
-                            encode_time.append(time_start.elapsed_time(time_end))
-                            transfer_data_size.append(len(data_to_trans))
-                            #####  Encoding #####
-
-                            ##### Send request #####
-                            time_start.record()
-                            r = requests.post(url=service_uri, data=data_to_trans)
-                            response = pickle.loads(r.content)
-                            time_end.record()
-                            torch.cuda.synchronize()
-                            request_time.append(time_start.elapsed_time(time_end))
-                            ##### Send request #####
                 ##################### Collect resource usage ##########################
-                resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
-                mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) ) 
-                cpu_time_client.append(float(str(mea[2]).replace("m","").replace("s","")))
-                # cuda_time.append(float(str(mea[8]).replace("m","").replace("s","")))
-                cpu_mem_client.append(abs(float(mea[8]))/1000 if mea[9]=='Kb' else abs(float(mea[8])))
-                cpu_time_edge.append(response["cpu_time"])
-                cuda_time_edge.append(response["cuda_time"])
-                cpu_mem_edge.append(response["cpu_mem"])
-                cuda_mem_edge.append(response["cuda_mem"])
-                model_time.append(response["model_time"])
-                decode_time.append(response["decode_time"])
-                ##################### 
-                detection = response["detection"]
+                
 
                 if len(detection[0])!= 0:
                     pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
@@ -233,7 +186,6 @@ if __name__ == "__main__":
 
             with open(map_output_path,'a') as f:
                 f.write(video_name+","
-                        +str(quality)+","
                         +str(maps["map"].item())+","
                         +str(maps["map_50"].item())+","
                         +str(maps["map_75"].item())+","
@@ -249,32 +201,6 @@ if __name__ == "__main__":
                 
             with open(time_output_path,'a') as f:
                 f.write(video_name+","
-                        +str(quality)+","
                         +str(np.array(model_time).mean())+","
-                        +str(np.array(model_time).std())+","
-                        +str(np.array(encode_time).mean())+","
-                        +str(np.array(encode_time).std())+","
-                        +str(np.array(decode_time).mean())+","
-                        +str(np.array(decode_time).std())+","
-                        +str(np.array(request_time).mean())+","
-                        +str(np.array(request_time).std())+"\n"
-                )
-                
-            with open(resource_output_path,'a') as f:
-                f.write(video_name+","
-                        +str(quality)+","
-                        +str(np.array(transfer_data_size).mean())+","
-                        +str(np.array(transfer_data_size).std())+","
-                        +str(np.array(cpu_time_client).mean())+","
-                        +str(np.array(cpu_time_client).std())+","
-                        +str(np.array(cpu_mem_client).mean())+","
-                        +str(np.array(cpu_mem_client).std())+","
-                        +str(np.array(cpu_time_edge).mean())+","
-                        +str(np.array(cpu_time_edge).std())+","
-                        +str(np.array(cuda_time_edge).mean())+","
-                        +str(np.array(cuda_time_edge).std())+","
-                        +str(np.array(cpu_mem_edge).mean())+","
-                        +str(np.array(cpu_mem_edge).std())+","
-                        +str(np.array(cuda_mem_edge).mean())+","
-                        +str(np.array(cuda_mem_edge).std())+"\n"
+                        +str(np.array(model_time).std())+"\n"
                 )
