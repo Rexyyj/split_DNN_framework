@@ -206,7 +206,7 @@ if __name__ == "__main__":
                                 labels=tensor([],dtype=torch.int32),)
                 frame_predicts.append(pred)
             metric = MeanAveragePrecision(iou_type="bbox") 
-            metric.update(frame_predicts, frame_labels[0:N_frame])
+            metric.update(frame_predicts, frame_labels[N_warmup:N_frame])
             maps = metric.compute()
 
             with open(map_output_path,'a') as f:
