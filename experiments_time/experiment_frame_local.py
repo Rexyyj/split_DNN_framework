@@ -24,7 +24,8 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 100
+N_frame = 105
+N_warmup = 5
 
 test_case = "frame_local"
 
@@ -153,10 +154,23 @@ if __name__ == "__main__":
 
             #####################################################################
             for index in range(len(test_frames)):
+
+                inWarmup = True
+                if index+1 > N_warmup:
+                    inWarmup = False
                 
                 frame = test_frames[index]
                 ################## Perform Object detection #############################
                 with torch.no_grad():
+
+                    #####  Warmup phase #####
+                    if inWarmup:
+                        frame_tensor = convert_rgb_frame_to_tensor(frame)
+                        head_tensor = model(frame_tensor, 1)
+                        inference_result = model(head_tensor,2)
+                        detection = non_max_suppression(inference_result, 0.5, 0.5)
+                        continue
+                    #####  Warmup phase #####
                     ##### Model #####
                     time_start.record()
                     frame_tensor = convert_rgb_frame_to_tensor(frame)

@@ -24,7 +24,9 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 100
+N_frame = 105
+N_warmup = 5
+
 
 test_case = "tensor_jpeg_pure"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
@@ -184,10 +186,22 @@ if __name__ == "__main__":
             request_time=[]
             #####################################################################
             for index in range(len(test_frames)):
-                
+                inWarmup = True
+                if index+1 > N_warmup:
+                    inWarmup = False
                 frame = test_frames[index]
                 ################## Perform Object detection #############################
                 with torch.no_grad():
+                    #####  Warmup phase #####
+                    if inWarmup:
+                        frame_tensor = convert_rgb_frame_to_tensor(frame)
+                        head_tensor = model(frame_tensor, 1)
+                        data_to_trans = sf.split_framework_encode(index, head_tensor)
+                        r = requests.post(url=service_uri, data=data_to_trans)
+                        response = pickle.loads(r.content)
+                        continue
+                    #####  Warmup phase #####
+
                     ##### Head Model #####
                     time_start.record()
                     frame_tensor = convert_rgb_frame_to_tensor(frame)

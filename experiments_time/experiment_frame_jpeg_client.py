@@ -24,7 +24,8 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 100
+N_frame = 105
+N_warmup = 5
 
 test_case = "frame_jpeg"
 service_uri = "http://10.0.1.23:8090/frame_jpeg"
@@ -152,11 +153,24 @@ if __name__ == "__main__":
             request_time=[]
             #####################################################################
             for index in range(len(test_frames)):
-                
+
+                inWarmup = True
+                if index+1 > N_warmup:
+                    inWarmup = False
+
                 frame = test_frames[index]
                 ################## Perform Object detection #############################
                 with torch.no_grad():
-                
+                    #####  Warmup phase #####
+                    if inWarmup:
+                        encoded_data = simplejpeg.encode_jpeg(frame,quality)
+                        payload = {"id":index, "frame":encoded_data}
+                        data_to_trans =  pickle.dumps(payload)
+                        r = requests.post(url=service_uri, data=data_to_trans)
+                        response = pickle.loads(r.content)
+                        continue
+                    #####  Warmup phase #####
+  
                     #####  Encoding #####
                     time_start.record()
                     encoded_data = simplejpeg.encode_jpeg(frame,quality)
