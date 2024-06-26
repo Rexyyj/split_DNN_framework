@@ -50,44 +50,25 @@ class TailModelService:
             decode_time = 0
             tail_time = 0
             ################## Perform Object detection #############################
-            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True) as prof:
-                with record_function("model_inference"):
-                    with torch.no_grad():
-                        ######## Framework decode ##########
-                        self.time_start.record()
-                        reconstructed_head_tensor = self.sf.split_framework_decode(data)
-                        self.time_end.record()
-                        torch.cuda.synchronize()
-                        decode_time = self.time_start.elapsed_time(self.time_end)
-                        
-                        ######## Framework decode ##########
-                        self.time_start.record()
-                        inference_result = self.model(reconstructed_head_tensor,2)
-                        detection = non_max_suppression(inference_result, 0.5, 0.5)
-                        # print(detection)
-                        self.time_end.record()
-                        torch.cuda.synchronize()
-                        tail_time = self.time_start.elapsed_time(self.time_end)
-            ##################### Collect resource usage ##########################
-            resource_mea = prof.key_averages().table(sort_by="cuda_time_total", row_limit=1)
-            mea=list(filter(None,resource_mea.split('\n')[3].split(" ")) ) 
-            cpu_time=float(str(mea[2]).replace("m","").replace("s",""))
-            cuda_time=float(str(mea[8]).replace("m","").replace("s",""))
-            if mea[13]=='b':
-                cpu_mem = abs(float(mea[12]))/1e6
-            elif mea[13]=='Kb':
-                cpu_mem = abs(float(mea[12]))/1e3
-            else:
-                cpu_mem =abs(float(mea[12]))
-            cuda_mem= abs(float(mea[16]))/1000 if mea[17] =='Kb' else abs(float(mea[16]))
-            ##################### Collect resource usage ##########################
+            with torch.no_grad():
+                ######## Framework decode ##########
+                self.time_start.record()
+                reconstructed_head_tensor = self.sf.split_framework_decode(data)
+                self.time_end.record()
+                torch.cuda.synchronize()
+                decode_time = self.time_start.elapsed_time(self.time_end)
+                
+                ######## Framework decode ##########
+                self.time_start.record()
+                inference_result = self.model(reconstructed_head_tensor,2)
+                detection = non_max_suppression(inference_result, 0.5, 0.5)
+                # print(detection)
+                self.time_end.record()
+                torch.cuda.synchronize()
+                tail_time = self.time_start.elapsed_time(self.time_end)
             test_restult = {"id":data["id"], 
                             "tail_time": tail_time,
                             "decode_time":decode_time,
-                            "cpu_time":cpu_time,
-                            "cuda_time":cuda_time,
-                            "cpu_mem":cpu_mem,
-                            "cuda_mem":cuda_mem,
                             "detection":detection }
             return pickle.dumps(test_restult)
 
