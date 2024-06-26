@@ -3,7 +3,7 @@ import sys
 sys.path.append('../')
 ################################### import libs ###################################
 import cv2
-from  pytorchyolo import detect, models_split_tiny
+from  pytorchyolo import detect, models_split_large
 from pytorchyolo.utils.transforms import Resize, DEFAULT_TRANSFORMS
 import torchvision.transforms as transforms
 import numpy as np
@@ -27,7 +27,7 @@ video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 105
 N_warmup = 5
 
-test_case = "tensor_ml"
+test_case = "tensor_ml_large"
 service_uri = "http://10.0.1.23:8090/tensor_ml"
 reset_uri = "http://10.0.1.23:8090/reset"
 
@@ -36,8 +36,8 @@ measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
 
-model_split_layer = 7
-dummy_head_tensor = torch.rand([1,128,26,26])
+model_split_layer = 4
+dummy_head_tensor = torch.rand([1, 64, 208, 208])
 ################################### Clean Old Logs ###################################
 try:
     path = os.path.join(log_dir,test_case)
@@ -141,7 +141,7 @@ def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
+    model = models_split_large.load_model("../pytorchyolo/config/yolov3.cfg","../pytorchyolo/weights/yolov3.weights")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     

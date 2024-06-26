@@ -6,7 +6,7 @@ import cherrypy
 import json
 
 import cv2
-from  pytorchyolo import detect, models_split_tiny
+from  pytorchyolo import detect, models_split_large
 from pytorchyolo.utils.transforms import Resize, DEFAULT_TRANSFORMS
 import torchvision.transforms as transforms
 import numpy as np
@@ -23,9 +23,9 @@ class TailModelService:
 
     @cherrypy.tools.accept(media='text/plain')
     def __init__(self, split_layer,dummy_tensor) -> None:
-        self.model = models_split_tiny.load_model(
-            "../pytorchyolo/config/yolov3-tiny.cfg",
-            "../pytorchyolo/weights/yolov3-tiny.weights")
+        self.model = models_split_large.load_model(
+            "../pytorchyolo/config/yolov3.cfg",
+            "../pytorchyolo/weights/yolov3.weights")
         self.model.set_split_layer(split_layer) # layer <7
         self.model = self.model.eval()
         self.dummy_tensor = dummy_tensor
@@ -75,8 +75,8 @@ class TailModelService:
 
 
 if __name__ == "__main__":
-    split_layer = 7
-    dummy_tensor = torch.rand([1,128,26,26])
+    split_layer = 4
+    dummy_tensor = torch.rand([1, 64, 208, 208])
     tail_service = TailModelService(split_layer, dummy_tensor)
 
     conf = {
