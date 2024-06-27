@@ -112,7 +112,10 @@ class SplitFramework():
         # Concatenate all parts
         final_lengths = torch.cat((full_chunks, remainders))
 
-        return bool_tensor[0].cpu().item(),final_lengths
+        # encode to bytes
+        encoded_bytes = final_lengths.cpu().numpy().tobytes()
+
+        return bool_tensor[0].cpu().item(),encoded_bytes
 
     
     def merge_255_values(self,tensor):
@@ -143,7 +146,7 @@ class SplitFramework():
     
     def reconstruct_bool_tensor(self,encoded_list, first_value):
        # Convert the encoded list to a PyTorch tensor of uint8
-
+        # encoded_list = np.frombuffer(encoded_list, dtype=np.uint8)
         encoded_tensor = torch.tensor(encoded_list, dtype=torch.uint8,device="cuda")
         
         # Convert encoded_tensor to int32 for repeat_interleave
