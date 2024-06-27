@@ -15,7 +15,7 @@ import pandas as pd
 import time
 import torch
 import pickle
-from split_framework.yolov3_tensor_ml import SplitFramework
+from split_framework.yolov3_tensor_ml_large import SplitFramework
 from torch.profiler import profile, record_function, ProfilerActivity
 
 class TailModelService:
