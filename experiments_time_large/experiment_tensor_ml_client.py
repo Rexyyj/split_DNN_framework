@@ -14,7 +14,7 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
-from split_framework.yolov3_tensor_ml_large import SplitFramework
+from split_framework.yolov3_tensor_ml_large_v2 import SplitFramework
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
@@ -27,7 +27,7 @@ video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 105
 N_warmup = 5
 
-test_case = "tensor_ml_large"
+test_case = "tensor_ml_large_run_length"
 service_uri = "http://10.0.1.23:8090/tensor_ml"
 reset_uri = "http://10.0.1.23:8090/reset"
 
