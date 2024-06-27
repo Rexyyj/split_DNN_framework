@@ -46,7 +46,7 @@ class SplitFramework():
         self.tail_time = []
 
         # Regression params
-        self.input_size = 676
+        self.input_size = 43264
         self.output_size = 3
         self.encoding_model_path = '../split_framework/ckpts/l1_loss_norm_large.pth'
         # Load model
