@@ -54,7 +54,7 @@ class SplitFramework():
         self.encode_model.load_state_dict(torch.load(self.encoding_model_path))
         self.encode_model.eval().to('cuda')
         index_base = np.arange(0,43264)/43264
-        index = torch.zeros(128,676, device="cuda")
+        index = torch.zeros(64,43264, device="cuda")
         for i in range(64):
             index[i] = torch.from_numpy(index_base)
         powers = torch.arange(3 - 1, -1, -1, device="cuda")
@@ -87,7 +87,7 @@ class SplitFramework():
         return SNR_dB
     
     def encode_bool_tensor_to_byte(self, tensor):
-        tensor = tensor.reshape(128*26*26)
+        tensor = tensor.reshape(64*208*208)
         numpy_array = tensor.cpu().numpy().astype(np.bool_)
         # Pack the NumPy array into bytes
         encoded_bytes = np.packbits(numpy_array).tobytes()
