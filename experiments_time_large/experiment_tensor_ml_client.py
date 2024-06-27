@@ -27,7 +27,7 @@ video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 105
 N_warmup = 5
 
-test_case = "tensor_ml_large_run_length"
+test_case = "tensor_ml_large"
 service_uri = "http://10.0.1.23:8090/tensor_ml"
 reset_uri = "http://10.0.1.23:8090/reset"
 

@@ -14,7 +14,7 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
-from split_framework.yolov3_tensor_jpeg import SplitFramework
+from split_framework.yolov3_tensor_direct_jpeg import SplitFramework
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
