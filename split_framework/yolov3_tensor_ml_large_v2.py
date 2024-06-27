@@ -86,7 +86,7 @@ class SplitFramework():
         
         return SNR_dB
     
-    def encode_consecutive_bool_tensor(bool_tensor):
+    def encode_consecutive_bool_tensor(self,bool_tensor):
     
         # Convert the boolean tensor to a tensor of integers (0 and 1)
         int_tensor = bool_tensor.to(torch.int)
