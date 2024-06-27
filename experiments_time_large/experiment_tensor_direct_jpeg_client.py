@@ -28,7 +28,7 @@ N_frame = 105
 N_warmup = 5
 
 
-test_case = "tensor_jpeg_large_015"
+test_case = "tensor_direct_jpeg_large"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.23:8090/reset"
 
