@@ -146,7 +146,7 @@ class SplitFramework():
     
     def reconstruct_bool_tensor(self,encoded_list, first_value):
        # Convert the encoded list to a PyTorch tensor of uint8
-        # encoded_list = np.frombuffer(encoded_list, dtype=np.uint8)
+        encoded_list = np.frombuffer(encoded_list, dtype=np.uint8)
         encoded_tensor = torch.tensor(encoded_list, dtype=torch.uint8,device="cuda")
         
         # Convert encoded_tensor to int32 for repeat_interleave
