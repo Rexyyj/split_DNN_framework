@@ -14,7 +14,7 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
-from split_framework.yolov3_tensor_jpeg import SplitFramework
+from split_framework.yolov3_tensor_jpeg_v2 import SplitFramework
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
@@ -28,7 +28,7 @@ N_frame = 105
 N_warmup = 5
 
 
-test_case = "tensor_jpeg"
+test_case = "tensor_jpeg_v2"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.23:8090/reset"
 
@@ -77,6 +77,8 @@ with open(time_output_path,'a') as f:
             "head_time_std,"
             "tail_time_mean,"
             "tail_time_std,"
+            "framework_time_mean,"
+            "framework_time_std,"
             "encode_time_mean,"
             "encode_time_std,"
             "decode_time_mean,"
@@ -184,6 +186,7 @@ if __name__ == "__main__":
             encode_time=[]
             decode_time=[]
             request_time=[]
+            framework_time=[]
             #####################################################################
             for index in range(len(test_frames)):
                 inWarmup = True
@@ -196,7 +199,7 @@ if __name__ == "__main__":
                     if inWarmup:
                         frame_tensor = convert_rgb_frame_to_tensor(frame)
                         head_tensor = model(frame_tensor, 1)
-                        data_to_trans = sf.split_framework_encode(index, head_tensor)
+                        framework_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                         r = requests.post(url=service_uri, data=data_to_trans)
                         response = pickle.loads(r.content)
                         continue
@@ -213,11 +216,12 @@ if __name__ == "__main__":
                 
                     ##### Framework Encoding #####
                     time_start.record()
-                    data_to_trans = sf.split_framework_encode(index, head_tensor)
+                    framework_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                     time_end.record()
                     torch.cuda.synchronize()
                     encode_time.append(time_start.elapsed_time(time_end))
                     transfer_data_size.append(len(data_to_trans))
+                    framework_time.append(framework_t)
                     ##### Framework Encoding #####
 
                     ##### Send request #####
@@ -274,6 +278,8 @@ if __name__ == "__main__":
                         +str(np.array(head_time).std())+","
                         +str(np.array(tail_time).mean())+","
                         +str(np.array(tail_time).std())+","
+                        +str(np.array(framework_time).mean())+","
+                        +str(np.array(framework_time).std())+","
                         +str(np.array(encode_time).mean())+","
                         +str(np.array(encode_time).std())+","
                         +str(np.array(decode_time).mean())+","
