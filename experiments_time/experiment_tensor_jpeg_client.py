@@ -28,17 +28,39 @@ N_frame = 105
 N_warmup = 5
 
 
-test_case = "tensor_jpeg_v2"
+test_case = "tensor_jpeg"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.23:8090/reset"
 
-log_dir = "../measurements/"
+log_dir = "../measurements/yolo_tiny_splitpoint/layer_8"
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
 
+# Note: model split layer should -1 for the actual split point
 model_split_layer = 7
-dummy_head_tensor = torch.rand([1,128,26,26])
+dummy_head_tensor = torch.rand([1, 128, 26, 26])
+
+# model_split_layer = 6
+# dummy_head_tensor = torch.rand([1, 128, 52, 52])
+
+# model_split_layer = 5
+# dummy_head_tensor = torch.rand([1, 64, 52, 52])
+
+# model_split_layer = 4
+# dummy_head_tensor = torch.rand([1, 64, 104, 104])
+
+# model_split_layer = 3
+# dummy_head_tensor = torch.rand([1, 32, 104, 104])
+
+# model_split_layer = 2
+# dummy_head_tensor = torch.rand([1, 32, 208, 208])
+
+# model_split_layer = 1
+# dummy_head_tensor = torch.rand([1, 16, 208, 208])
+
+# model_split_layer = 0
+# dummy_head_tensor = torch.rand([1, 16, 416, 416])
 ################################### Clean Old Logs ###################################
 try:
     path = os.path.join(log_dir,test_case)
