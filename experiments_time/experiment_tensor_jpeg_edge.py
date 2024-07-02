@@ -76,30 +76,33 @@ class TailModelService:
 
 
 if __name__ == "__main__":
-    # Note: model split layer should -1 for the actual split point
-    model_split_layer = 7
-    dummy_head_tensor = torch.rand([1, 128, 26, 26])
+    split_layer = int(sys.argv[1])
 
-    # model_split_layer = 6
-    # dummy_head_tensor = torch.rand([1, 128, 52, 52])
-
-    # model_split_layer = 5
-    # dummy_head_tensor = torch.rand([1, 64, 52, 52])
-
-    # model_split_layer = 4
-    # dummy_head_tensor = torch.rand([1, 64, 104, 104])
-
-    # model_split_layer = 3
-    # dummy_head_tensor = torch.rand([1, 32, 104, 104])
-
-    # model_split_layer = 2
-    # dummy_head_tensor = torch.rand([1, 32, 208, 208])
-
-    # model_split_layer = 1
-    # dummy_head_tensor = torch.rand([1, 16, 208, 208])
-
-    # model_split_layer = 0
-    # dummy_head_tensor = torch.rand([1, 16, 416, 416])
+    if split_layer==8:
+        model_split_layer = 7
+        dummy_head_tensor = torch.rand([1, 128, 26, 26])
+    elif split_layer==7:
+        model_split_layer = 6
+        dummy_head_tensor = torch.rand([1, 128, 52, 52])
+    elif split_layer==6:
+        model_split_layer = 5
+        dummy_head_tensor = torch.rand([1, 64, 52, 52])
+    elif split_layer==5:
+        model_split_layer = 4
+        dummy_head_tensor = torch.rand([1, 64, 104, 104])
+    elif split_layer==4:
+        model_split_layer = 3
+        dummy_head_tensor = torch.rand([1, 32, 104, 104])
+    elif split_layer==3:
+        model_split_layer = 2
+        dummy_head_tensor = torch.rand([1, 32, 208, 208])
+    elif split_layer==2:
+        model_split_layer = 1
+        dummy_head_tensor = torch.rand([1, 16, 208, 208])
+    elif split_layer==1:
+        model_split_layer = 0
+        dummy_head_tensor = torch.rand([1, 16, 416, 416])
+        
     tail_service = TailModelService(model_split_layer, dummy_head_tensor)
 
     conf = {

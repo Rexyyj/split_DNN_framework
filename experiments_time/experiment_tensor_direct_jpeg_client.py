@@ -26,7 +26,7 @@ video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 105
 N_warmup = 5
-split_layer= 8
+split_layer= int(sys.argv[1])
 
 test_case = "tensor_direct_jpeg"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"

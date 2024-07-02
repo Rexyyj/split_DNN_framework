@@ -76,7 +76,7 @@ class TailModelService:
 
 
 if __name__ == "__main__":
-    split_layer = 8
+    split_layer = int(sys.argv[1])
 
     if split_layer==8:
         model_split_layer = 7
