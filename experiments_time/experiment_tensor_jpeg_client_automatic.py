@@ -196,8 +196,8 @@ def main_function(split_layer):
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for j in range(2):
-            for i in range(2):
+        for j in range(10):
+            for i in range(5):
                 reset_required = True
                 while reset_required:
                     r = requests.post(url=reset_uri)
@@ -210,7 +210,7 @@ def main_function(split_layer):
 
                 
                 frame_predicts = []
-                thresh = 0.02*(j+1)
+                thresh = 0.05*(j+1)
                 quality =60+10*i
                 print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
                 sf = SplitFramework(device="cuda")
@@ -335,6 +335,9 @@ def main_function(split_layer):
 if __name__ == "__main__":
     for split_layer in range(1,9):
         try:
+            print("****************************************")
+            print("Testing split layer: ",split_layer)
             main_function(split_layer)
+            print("****************************************")
         except:
             print("Error at split layer: ", split_layer)
