@@ -26,90 +26,61 @@ video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
 N_frame = 105
 N_warmup = 5
-split_layer= int(sys.argv[1])
+
 
 test_case = "tensor_jpeg"
 service_uri = "http://10.0.1.23:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.23:8090/reset"
-
-log_dir = "../measurements/yolo_tiny_splitpoint/layer_"+str(split_layer)+"/"
-measurement_path = log_dir+test_case+"/"
-map_output_path = measurement_path+ "map.csv"
-time_output_path = measurement_path+ "time.csv"
-
-# Note: model split layer should -1 for the actual split point
-if split_layer==8:
-    model_split_layer = 7
-    dummy_head_tensor = torch.rand([1, 128, 26, 26])
-elif split_layer==7:
-    model_split_layer = 6
-    dummy_head_tensor = torch.rand([1, 128, 52, 52])
-elif split_layer==6:
-    model_split_layer = 5
-    dummy_head_tensor = torch.rand([1, 64, 52, 52])
-elif split_layer==5:
-    model_split_layer = 4
-    dummy_head_tensor = torch.rand([1, 64, 104, 104])
-elif split_layer==4:
-    model_split_layer = 3
-    dummy_head_tensor = torch.rand([1, 32, 104, 104])
-elif split_layer==3:
-    model_split_layer = 2
-    dummy_head_tensor = torch.rand([1, 32, 208, 208])
-elif split_layer==2:
-    model_split_layer = 1
-    dummy_head_tensor = torch.rand([1, 16, 208, 208])
-elif split_layer==1:
-    model_split_layer = 0
-    dummy_head_tensor = torch.rand([1, 16, 416, 416])
+setlayer_uri = "http://10.0.1.23:8090/set_layer"
 ################################### Clean Old Logs ###################################
-try:
-    path = os.path.join(log_dir,test_case)
-    os.mkdir(path)
-except:
-    os.system("rm -rf "+measurement_path)
-    time.sleep(3)
-    path = os.path.join(log_dir,test_case)
-    os.mkdir(path)
-        
+def setup_log_env(log_dir,measurement_path,test_case,map_output_path,time_output_path):
+    try:
+        path = os.path.join(log_dir,test_case)
+        os.mkdir(path)
+    except:
+        os.system("rm -rf "+measurement_path)
+        time.sleep(3)
+        path = os.path.join(log_dir,test_case)
+        os.mkdir(path)
+            
 
-with open(map_output_path,'a') as f:
-    title = ("video_name,"
-            "pruning_thresh,"
-            "jepg_quality,"
-            "data_size_mean,"
-            "data_size_std,"
-            "map,"
-            "map_50,"
-            "map_75,"
-            "map_small,"
-            "map_medium,"
-            "map_large,"
-            "mar_1,"
-            "mar_100,"
-            "mar_small,"
-            "mar_medium,"
-            "mar_large\n")
-    f.write(title)
+    with open(map_output_path,'a') as f:
+        title = ("video_name,"
+                "pruning_thresh,"
+                "jepg_quality,"
+                "data_size_mean,"
+                "data_size_std,"
+                "map,"
+                "map_50,"
+                "map_75,"
+                "map_small,"
+                "map_medium,"
+                "map_large,"
+                "mar_1,"
+                "mar_100,"
+                "mar_small,"
+                "mar_medium,"
+                "mar_large\n")
+        f.write(title)
 
-with open(time_output_path,'a') as f:
-    title = ("video_name,"
-            "pruning_thresh,"
-            "jepg_quality,"
-            "head_time_mean,"
-            "head_time_std,"
-            "tail_time_mean,"
-            "tail_time_std,"
-            "framework_time_mean,"
-            "framework_time_std,"
-            "encode_time_mean,"
-            "encode_time_std,"
-            "decode_time_mean,"
-            "decode_time_std,"
-            "request_time_mean,"
-            "request_time_std\n"
-            )
-    f.write(title)
+    with open(time_output_path,'a') as f:
+        title = ("video_name,"
+                "pruning_thresh,"
+                "jepg_quality,"
+                "head_time_mean,"
+                "head_time_std,"
+                "tail_time_mean,"
+                "tail_time_std,"
+                "framework_time_mean,"
+                "framework_time_std,"
+                "encode_time_mean,"
+                "encode_time_std,"
+                "decode_time_mean,"
+                "decode_time_std,"
+                "request_time_mean,"
+                "request_time_std\n"
+                )
+        f.write(title)
 
 ################################### Utility functions ###################################
 def convert_rgb_frame_to_tensor(image):
@@ -163,13 +134,61 @@ def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number
     print("Load total number of video frames: ", len(test_frames))
     return test_frames
 
-################################### Main function ###################################
+def get_dummy_tensor(split_layer):
+    # Note: model split layer should -1 for the actual split point
+    if split_layer==8:
+        model_split_layer = 7
+        dummy_head_tensor = torch.rand([1, 128, 26, 26])
+    elif split_layer==7:
+        model_split_layer = 6
+        dummy_head_tensor = torch.rand([1, 128, 52, 52])
+    elif split_layer==6:
+        model_split_layer = 5
+        dummy_head_tensor = torch.rand([1, 64, 52, 52])
+    elif split_layer==5:
+        model_split_layer = 4
+        dummy_head_tensor = torch.rand([1, 64, 104, 104])
+    elif split_layer==4:
+        model_split_layer = 3
+        dummy_head_tensor = torch.rand([1, 32, 104, 104])
+    elif split_layer==3:
+        model_split_layer = 2
+        dummy_head_tensor = torch.rand([1, 32, 208, 208])
+    elif split_layer==2:
+        model_split_layer = 1
+        dummy_head_tensor = torch.rand([1, 16, 208, 208])
+    elif split_layer==1:
+        model_split_layer = 0
+        dummy_head_tensor = torch.rand([1, 16, 416, 416])
+    return model_split_layer,dummy_head_tensor
 
-if __name__ == "__main__":
+################################### Main function ###################################
+def main_function(split_layer):
+    # set up log env
+    log_dir = "../measurements/yolo_tiny_splitpoint/layer_"+str(split_layer)+"/"
+    measurement_path = log_dir+test_case+"/"
+    map_output_path = measurement_path+ "map.csv"
+    time_output_path = measurement_path+ "time.csv"
+    setup_log_env(log_dir,measurement_path,test_case,map_output_path,time_output_path)
+
+
     # Load Model
+    model_split_layer, dummy_head_tensor = get_dummy_tensor(split_layer)
     model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
+
+    # Set edge spilt layer
+    setlayer_required = True
+    while setlayer_required:
+        r = requests.post(url=reset_uri,data=pickle.dumps({"split_layer":split_layer}))
+        result = pickle.loads(r.content)
+        if result["set_layer"] == True:
+            reset_required = False
+        else:
+            print("Set edge split layer failed...")
+        time.sleep(1)
+
     
     # Load videos
     for video_name in video_names:
@@ -177,8 +196,8 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for j in range(10):
-            for i in range(5):
+        for j in range(2):
+            for i in range(2):
                 reset_required = True
                 while reset_required:
                     r = requests.post(url=reset_uri)
@@ -311,3 +330,11 @@ if __name__ == "__main__":
                             +str(np.array(request_time).std())+"\n"
                     )
                     
+
+
+if __name__ == "__main__":
+    for split_layer in range(1,9):
+        try:
+            main_function(split_layer)
+        except:
+            print("Error at split layer: ", split_layer)
