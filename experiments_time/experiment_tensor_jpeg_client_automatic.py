@@ -181,10 +181,10 @@ def main_function(split_layer):
     # Set edge spilt layer
     setlayer_required = True
     while setlayer_required:
-        r = requests.post(url=reset_uri,data=pickle.dumps({"split_layer":split_layer}))
+        r = requests.post(url=setlayer_uri,data=pickle.dumps({"split_layer":split_layer}))
         result = pickle.loads(r.content)
         if result["set_layer"] == True:
-            reset_required = False
+            setlayer_required = False
         else:
             print("Set edge split layer failed...")
         time.sleep(1)
