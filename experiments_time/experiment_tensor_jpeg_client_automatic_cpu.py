@@ -333,11 +333,11 @@ def main_function(split_layer):
 
 
 if __name__ == "__main__":
-    for split_layer in range(2,9):
-        # try:
-        #     print("****************************************")
-        print("Testing split layer: ",split_layer)
-        main_function(split_layer)
-        #     print("****************************************")
-        # except:
-        #     print("Error at split layer: ", split_layer)
+    for split_layer in range(1,9):
+        try:
+            print("****************************************")
+            print("Testing split layer: ",split_layer)
+            main_function(split_layer)
+            print("****************************************")
+        except:
+            print("Error at split layer: ", split_layer)
