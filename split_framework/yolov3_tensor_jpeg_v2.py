@@ -71,7 +71,6 @@ class SplitFramework():
         encoded_data = simplejpeg.encode_jpeg(tensor_normal.cpu().numpy().astype(np.uint8),self.jpeg_quality,'GRAY')
         # self.data_size.append(transfer_data.shape[0])
         decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded_data,"GRAY")).to(self.device)
-        
         # # Reconstruct diff tensor
         reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
         reconstructed_tensor = (reconstructed_tensor.to(torch.float)-zero_point) * scale * normalize_base
@@ -99,7 +98,12 @@ class SplitFramework():
             torch.cuda.synchronize()
             operation_time = self.time_start.elapsed_time(self.time_end)
 
+            ## Jpeg encoding
+            self.time_start.record()
             normalize_base, scale,zero_point, encoded_data, reconstructed_tensor = self.jpeg_encode(pruned_tensor)
+            self.time_end.record()
+            torch.cuda.synchronize()
+            jpeg_encoding_time = self.time_start.elapsed_time(self.time_end)
 
             payload = {
                 "id" : id,
@@ -111,7 +115,7 @@ class SplitFramework():
             # updte the reference tensor
             self.reference_tensor = self.reference_tensor + reconstructed_tensor
 
-        return operation_time,pickle.dumps(payload)
+        return operation_time,jpeg_encoding_time,pickle.dumps(payload)
 
     def split_framework_decode(self,tensor_dict):
         reconstructed_tensor = self.jpeg_decode(tensor_dict)

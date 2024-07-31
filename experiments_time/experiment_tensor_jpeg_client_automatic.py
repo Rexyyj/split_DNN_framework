@@ -73,6 +73,8 @@ def setup_log_env(log_dir,measurement_path,test_case,map_output_path,time_output
                 "tail_time_std,"
                 "framework_time_mean,"
                 "framework_time_std,"
+                "jpeg_time_mean,"
+                "jpeg_time_std,"
                 "encode_time_mean,"
                 "encode_time_std,"
                 "decode_time_mean,"
@@ -164,8 +166,8 @@ def get_dummy_tensor(split_layer):
 
 ################################### Main function ###################################
 def main_function(split_layer):
-    # set up log env
-    log_dir = "../measurements/yolo_tiny_splitpoint/layer_"+str(split_layer)+"/"
+    # set up log env, when log dir changed, new intermediate folder should be created manually
+    log_dir = "../measurements/yolo_tiny_jpeg_time/layer_"+str(split_layer)+"/"
     measurement_path = log_dir+test_case+"/"
     map_output_path = measurement_path+ "map.csv"
     time_output_path = measurement_path+ "time.csv"
@@ -229,6 +231,7 @@ def main_function(split_layer):
                 decode_time=[]
                 request_time=[]
                 framework_time=[]
+                jpeg_time = []
                 #####################################################################
                 for index in range(len(test_frames)):
                     inWarmup = True
@@ -241,7 +244,7 @@ def main_function(split_layer):
                         if inWarmup:
                             frame_tensor = convert_rgb_frame_to_tensor(frame)
                             head_tensor = model(frame_tensor, 1)
-                            framework_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                            framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                             r = requests.post(url=service_uri, data=data_to_trans)
                             response = pickle.loads(r.content)
                             continue
@@ -258,12 +261,13 @@ def main_function(split_layer):
                     
                         ##### Framework Encoding #####
                         time_start.record()
-                        framework_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                        framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                         time_end.record()
                         torch.cuda.synchronize()
                         encode_time.append(time_start.elapsed_time(time_end))
                         transfer_data_size.append(len(data_to_trans))
                         framework_time.append(framework_t)
+                        jpeg_time.append(jpeg_t)
                         ##### Framework Encoding #####
 
                         ##### Send request #####
@@ -322,6 +326,8 @@ def main_function(split_layer):
                             +str(np.array(tail_time).std())+","
                             +str(np.array(framework_time).mean())+","
                             +str(np.array(framework_time).std())+","
+                            +str(np.array(jpeg_time).mean())+","
+                            +str(np.array(jpeg_time).std())+","
                             +str(np.array(encode_time).mean())+","
                             +str(np.array(encode_time).std())+","
                             +str(np.array(decode_time).mean())+","
@@ -333,6 +339,7 @@ def main_function(split_layer):
 
 
 if __name__ == "__main__":
+    # main_function(2)
     for split_layer in range(1,9):
         try:
             print("****************************************")
