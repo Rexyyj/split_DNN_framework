@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from nvjpeg import NvJpeg
 import pickle
+import torch.nn.functional as F
 ################################### class definition ###################################
 
 class SplitFramework():
@@ -16,6 +17,7 @@ class SplitFramework():
         self.tensor_size= None
         self.tensor_shape = None
         self.pruning_threshold= None
+        self.pedding = (0, 0, 0, 1)
 
         # Measurements
         self.diff_tensor_sparsity = []
@@ -67,9 +69,10 @@ class SplitFramework():
         tensor_normal = torch.quantize_per_tensor(tensor_normal, scale, zero_point, dtype)
         tensor_normal = tensor_normal.int_repr()
         tensor_normal = tensor_normal.to(torch.uint8).reshape((self.tensor_shape[1],self.tensor_shape[2]*self.tensor_shape[3],1))
-
+        tensor_padded = F.pad(tensor_normal, self.pedding)
+        tensor_padded = tensor_padded.reshape((tensor_padded.shape[0]/3,3))
         # JPEG encoding/decoding
-        encoded_data = self.nj.encode(tensor_normal.cpu().numpy().astype(np.uint8),self.jpeg_quality)
+        encoded_data = self.nj.encode(tensor_padded.cpu().numpy().astype(np.uint8),self.jpeg_quality)
         # self.data_size.append(transfer_data.shape[0])
         decoded_data = torch.from_numpy(self.nj.decode(encoded_data)).to(self.device)
         # # Reconstruct diff tensor
@@ -80,7 +83,9 @@ class SplitFramework():
         return normalize_base, scale,zero_point, encoded_data, reconstructed_tensor
 
     def jpeg_decode(self, tensor_dict):
-        decoded_data = torch.from_numpy(self.nj.decode(tensor_dict["encoded"])).to(self.device)
+        decoded_data  = torch.from_numpy(self.nj.decode(tensor_dict["encoded"])).to(self.device)
+        decoded_data = decoded_data.reshape((decoded_data.shape[0]*3,1))
+        decoded_data = decoded_data[0:decoded_data.shape[0]-1]
         reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
         reconstructed_tensor = (reconstructed_tensor.to(torch.float)-tensor_dict["zero"]) * tensor_dict["scale"] * tensor_dict["normal"]
         return reconstructed_tensor
