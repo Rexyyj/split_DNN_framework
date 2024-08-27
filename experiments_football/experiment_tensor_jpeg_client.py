@@ -7,7 +7,7 @@ from  pytorchyolo import detect, models_split_tiny
 from pytorchyolo.utils.transforms import Resize, DEFAULT_TRANSFORMS
 import torchvision.transforms as transforms
 import numpy as np
-from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
+from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info,xywh2xyxy_np
 import pandas as pd
 import time
 import torch
@@ -139,7 +139,8 @@ def load_ground_truth():
         for gt in gts:
             temp = [float(elem) for elem in gt.replace("\n","").split(" ")]
             labels.append(int(temp[0]))
-            boxes.append(temp[1:])
+            box = xywh2xyxy_np(np.array(temp[1:]))
+            boxes.append(box*416)
         frame_labels.append(dict(boxes=tensor(boxes,dtype=torch.float32),labels=tensor(labels,dtype=torch.int32),) )
     return frame_labels
 
@@ -180,8 +181,10 @@ if __name__ == "__main__":
 
             
             frame_predicts = []
-            thresh = 0.02*(j+1)
+            thresh = 0.01*(j+1)
             quality =60+10*i
+            # thresh = 0.02
+            # quality =100
             print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
             sf = SplitFramework(device="cuda")
             sf.set_reference_tensor(dummy_head_tensor)
@@ -256,6 +259,11 @@ if __name__ == "__main__":
                     pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
                                 scores=tensor(detection[0].numpy()[:,4]),
                                 labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
+                    # print("------------------------------------")
+                    # print(pred)
+                    # print("***********")
+                    # print(frame_labels[index])
+                    # print("------------------------------------")
                 else:
                     pred = dict(boxes=tensor([]),
                                 scores=tensor([]),
