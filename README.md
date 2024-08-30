@@ -45,3 +45,18 @@ Computing AP: 100%|████████████████████�
 +-------+---------------+---------+
 ---- mAP 0.36557 ----
 ```
+
+## Running the split framework
+Running the split framework require two machines. We should first deploy the DNN tail model on the edge server, and then run the DNN head model on the mobile device. 
+
+### On the edge server (ux550 latop)
+1. Activate Pytorch environment with: ```conda activate pytorch```
+2. Enter the folder: ```/home/rex/gitHub/split_DNN_framework/experiments_football```
+3. Run the DNN tail model with: ``` python3 experiment_tensor_jpeg_edge.py <DNN_split_layer>``` For the current tests, we alwasy split the DNN at the 8th layer.
+
+### On the mobile device side (Jetson Orin Nano)
+1. Activate Pytorch environment with: ```conda activate pytorch```
+2. Enter the folder: ```/home/rex/gitRepo/split_DNN_framework/experiments_football```
+3. Run the DNN head model with the test scenario. There are two different versions:
+   * Printing version: ``` python3 experiment_tensor_jpeg_clientv2.py <DNN_split_layer>``` With this script, at the end of the test the AP of each class will be printed at the terminal.
+   * Logging version: ``` python3 experiment_tensor_jpeg_client.py <DNN_split_layer>``` With this script, the mAP and the each step delay will be measured and logged to the folder: ```/home/rex/gitRepo/split_DNN_framework/measurements/yolo_tiny_splitpoint/layer_8/football_tensor_jpeg```
