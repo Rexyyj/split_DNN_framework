@@ -14,7 +14,8 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
-from split_framework.yolov3_tensor_jpeg_v4 import SplitFramework
+from split_framework.yolov3_tensor_jpeg_v2 import SplitFramework
+
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
@@ -169,7 +170,7 @@ def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
+    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/checkpoints/yolov3_ckpt_300.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
