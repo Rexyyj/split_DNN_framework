@@ -33,9 +33,16 @@ def calculate_mse(original_tensor, reconstructed_tensor):
     error = tl.metrics.MSE(original_tensor, reconstructed_tensor)
     return error
 
+def calculate_sparsity(tensor):
+    raise_error_when_not_numpy(tensor)
+    tensor_size = tensor.shape[0]* tensor.shape[1] * tensor.shape[2]
+    zero_mask = tensor==0
+    zero_num = np.sum(zero_mask)
+    sparsity = zero_num / tensor_size
+    return sparsity
 
 
-def find_cp_rank(tensor, tol=1e-3, max_rank=50):
+def calculate_cp_rank(tensor, tol=1e-3, max_rank=50):
     raise_error_when_not_numpy(tensor)
     errors = []
     for rank in range(1, max_rank + 1):
@@ -51,7 +58,7 @@ def find_cp_rank(tensor, tol=1e-3, max_rank=50):
             print("Error:"+str(error))
             # Check if the error falls below the specified tolerance
             if error < tol:
-                return rank, errors
+                return rank
         except Exception:
             continue
-    return max_rank, errors  # Return the maximum rank if no suitable rank is found
+    return max_rank  # Return the maximum rank if no suitable rank is found
