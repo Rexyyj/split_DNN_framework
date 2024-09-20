@@ -21,8 +21,21 @@ def compressor_jpeg(tensor, quality):
         return normalize_base, scale,zero_point, encoded_data, compressed_size # compressed size in bytes
 
 
+def compressor_jpeg_direct(tensor, quality):
+
+       # JPEG encoding/decoding
+        encoded_data = simplejpeg.encode_jpeg(tensor.cpu().numpy().astype(np.uint8),quality,'RGB')
+        compressed_size = len(encoded_data)
+
+        return encoded_data, compressed_size # compressed size in bytes
+
 def decompressor_jpeg(tensor_shape,normalize_base, scale,zero_point, encoded_data):
     decoded_data =decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded_data,"RGB"))
     reconstructed_tensor = decoded_data.reshape(tensor_shape)
     reconstructed_tensor = (reconstructed_tensor.to(torch.float)-zero_point) * scale * normalize_base
+    return reconstructed_tensor
+
+def decompressor_jpeg_direct(tensor_shape, encoded_data):
+    decoded_data =decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded_data,"RGB"))
+    reconstructed_tensor = decoded_data.reshape(tensor_shape)
     return reconstructed_tensor
