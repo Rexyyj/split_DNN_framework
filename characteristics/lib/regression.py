@@ -21,7 +21,7 @@ def compressor_regression(tensor, polynominal):
             factors.append(m)
             x_pos.append(mask)
             x_neg.append(t<0)
-            compressed_size = compressed_size+ tensor.shape[1]*tensor.shape[2]/4 + polynominal*4
+            compressed_size +=  tensor.shape[1]*tensor.shape[2]/4 + polynominal*4
         
     return factors, x_pos, x_neg, compressed_size
 

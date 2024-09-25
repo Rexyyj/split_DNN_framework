@@ -31,6 +31,7 @@ def calculate_snr(tensor_size, original_tensor, reconstructed_tensor):
 def calculate_mse(original_tensor, reconstructed_tensor):
     raise_error_when_not_numpy(original_tensor)
     raise_error_when_not_numpy(reconstructed_tensor)
+    tl.set_backend('numpy')
     error = tl.metrics.MSE(original_tensor, reconstructed_tensor)
     return error
 
@@ -41,6 +42,13 @@ def calculate_sparsity(tensor):
     zero_num = np.sum(zero_mask)
     sparsity = zero_num / tensor_size
     return sparsity
+
+def calculate_slice_avg_rank(tensor):
+    rank = 0
+    for i in range(tensor.shape[0]):
+        rank +=torch.linalg.matrix_rank(tensor[i]).item()
+    avg_rank = rank / tensor.shape[0]
+    return avg_rank
 
 
 def calculate_cp_rank(tensor, tol=1e-3, max_rank=50):
@@ -98,9 +106,12 @@ def calculate_cp_rank(tensor, tol=1e-3, max_rank=50):
 #     return rank  # Return the maximum rank if no suitable rank is found
 
 def get_probability_tensor(tensor):
-    normalize_base =torch.abs(tensor).max()
-    quantized_tensor = torch.floor(((tensor / normalize_base +1)/2)*255 )
-
+    # normalize_base =torch.abs(tensor).max()
+    # quantized_tensor = torch.floor(((tensor / normalize_base +1)/2)*256 )
+    tensor_min = tensor.min().item()
+    tensor_max = tensor.max().item()
+    normalized_tensor = (tensor - tensor_min) / (tensor_max - tensor_min)
+    quantized_tensor = torch.floor(normalized_tensor *255)
     unique_values, counts = torch.unique(quantized_tensor, return_counts=True)
     probabilities = counts.float() / quantized_tensor.numel()  # Probability of each unique value
 
@@ -113,12 +124,23 @@ def get_probability_tensor(tensor):
         probability_tensor[quantized_tensor == val] = value_to_prob[val.item()]
     return probability_tensor
 
+def quantize_tensor(tensor):
+    normalize_base =torch.abs(tensor).max()
+    tensor_q = torch.floor(((tensor / normalize_base +1)/2)*256 )
+    return tensor_q
+
 def get_tensor_pictoriality(tensor):
     dct_tensor = dct.dct_3d(tensor)
     entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
     return entropy.item()
 
 def get_tensor_regularity(tensor):
-    fft_tensor = torch.fft.fft(tensor[tensor!=0])
-    entropy = torch.sum(torch.special.entr(get_probability_tensor(abs(fft_tensor))))
+    # fft_tensor = torch.fft.fft(tensor[tensor!=0])
+    # fft_tensor = dct.dct(tensor[tensor!=0])
+    # fft_tensor = torch.fft.fft(tensor)
+    entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor)))
     return entropy.item()
+
+def get_tensor_entropy(tensor):
+    entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor)))
+    return entropy

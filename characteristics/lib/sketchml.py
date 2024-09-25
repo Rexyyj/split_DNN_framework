@@ -200,9 +200,9 @@ def compressor_sketchml(tensor, sketch_q, sketch_m, sketch_d):
     
     # Encoding
     encode_key = []
-    for i in range(128):
+    for i in range(256):
         encode_key.append(i)
-    encode_key.append(255)
+    # encode_key.append(255)
     encoder = HuffmanCodec.from_data(encode_key)
 
     compressed_size = 0
