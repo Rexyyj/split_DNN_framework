@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import tensorly as tl
+import torch_dct as dct
 
 def raise_error_when_not_numpy(value):
     if isinstance(value,np.ndarray) == False:
@@ -47,7 +48,7 @@ def calculate_cp_rank(tensor, tol=1e-3, max_rank=50):
     errors = []
     for rank in range(1, max_rank + 1):
         try:
-            print("Testing rank: "+str(rank))
+            # print("Testing rank: "+str(rank))
             # Perform CP decomposition
             weights, factors = tl.decomposition.parafac(tensor, rank=rank,verbose=False)
             # Reconstruct the tensor from the CP decomposition
@@ -55,10 +56,69 @@ def calculate_cp_rank(tensor, tol=1e-3, max_rank=50):
             # Calculate the reconstruction error
             error = tl.metrics.MSE(tensor, reconstructed_tensor)
             errors.append((rank, error))
-            print("Error:"+str(error))
+            # print("Error:"+str(error))
             # Check if the error falls below the specified tolerance
             if error < tol:
                 return rank
         except Exception:
             continue
     return max_rank  # Return the maximum rank if no suitable rank is found
+
+# def calculate_cp_rank_fast(tensor, tol=1e-3, max_rank=30):
+#     raise_error_when_not_numpy(tensor)
+#     rank_previous=0
+#     rank = max_rank
+#     while True:
+#         try:
+#             print("Testing rank: "+str(rank))
+#             # Perform CP decomposition
+#             weights, factors = tl.decomposition.parafac(tensor, rank=rank,verbose=False)
+#             # Reconstruct the tensor from the CP decomposition
+#             reconstructed_tensor = tl.cp_to_tensor((weights, factors))
+#             # Calculate the reconstruction error
+#             error = tl.metrics.MSE(tensor, reconstructed_tensor)
+#             # print("Error:"+str(error))
+#             # Check if the error falls below the specified tolerance
+#             if rank_previous == rank:
+#                 break
+#             else:
+#                 if error > tol:
+#                     temp = rank
+#                     rank = round((rank+rank_previous)/2)
+#                     rank_previous = temp
+#                 else:
+
+#                     rank_previous = rank
+#                     rank = round(rank/2)
+#                     if rank == 0:
+#                         rank =1
+                
+#         except Exception:
+#             continue
+#     return rank  # Return the maximum rank if no suitable rank is found
+
+def get_probability_tensor(tensor):
+    normalize_base =torch.abs(tensor).max()
+    quantized_tensor = torch.floor(((tensor / normalize_base +1)/2)*255 )
+
+    unique_values, counts = torch.unique(quantized_tensor, return_counts=True)
+    probabilities = counts.float() / quantized_tensor.numel()  # Probability of each unique value
+
+    # Step 5: Create a mapping of quantized values to probabilities
+    value_to_prob = {val.item(): prob.item() for val, prob in zip(unique_values, probabilities)}
+
+    # Step 6: Map the probabilities back to the quantized tensor
+    probability_tensor = quantized_tensor.clone()
+    for val in unique_values:
+        probability_tensor[quantized_tensor == val] = value_to_prob[val.item()]
+    return probability_tensor
+
+def get_tensor_pictoriality(tensor):
+    dct_tensor = dct.dct_3d(tensor)
+    entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
+    return entropy.item()
+
+def get_tensor_regularity(tensor):
+    fft_tensor = torch.fft.fft(tensor[tensor!=0])
+    entropy = torch.sum(torch.special.entr(get_probability_tensor(abs(fft_tensor))))
+    return entropy.item()
