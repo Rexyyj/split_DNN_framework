@@ -15,6 +15,23 @@ def decompressor_decomposition(factors):
     reconstructed_tensor = tl.cp_to_tensor(factors)
     return reconstructed_tensor
 
+def compressor_decomposition_slice_quality(tensor,ratio):
+    tl.set_backend('pytorch')
+    factors= []
+    compressed_size = 0
+    for i in range(tensor.shape[0]):
+        if torch.linalg.matrix_rank(tensor[i]).item() == 0:
+            factors.append(0)
+        else:
+            rank = round(torch.linalg.matrix_rank(tensor[i]).item()*ratio)
+            if rank == 0:
+                rank =1
+            ft = tl.decomposition.parafac(tensor[i], rank=rank)
+            factors.append(ft)
+            compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4
+            compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4
+    return factors, compressed_size
+
 def compressor_decomposition_slice(tensor):
     tl.set_backend('pytorch')
     factors= []

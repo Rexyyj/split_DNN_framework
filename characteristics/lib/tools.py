@@ -130,17 +130,36 @@ def quantize_tensor(tensor):
     return tensor_q
 
 def get_tensor_pictoriality(tensor):
-    dct_tensor = dct.dct_3d(tensor)
-    entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
-    return entropy.item()
+    dct_tensor = dct.dct_2d(tensor)
+    # entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
+    entropy = calculate_entropy_float_tensor(dct_tensor)
+    return entropy/8
 
 def get_tensor_regularity(tensor):
     # fft_tensor = torch.fft.fft(tensor[tensor!=0])
     # fft_tensor = dct.dct(tensor[tensor!=0])
     # fft_tensor = torch.fft.fft(tensor)
-    entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor)))
-    return entropy.item()
+    # entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor[tensor!=0])))
+    entropy = calculate_entropy_float_tensor(tensor)
+    return entropy/8
 
-def get_tensor_entropy(tensor):
-    entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor)))
+# def get_tensor_entropy(tensor):
+#     entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor)))
+#     return entropy/5.544
+
+def calculate_entropy_float_tensor(tensor):
+    # Step 1: Flatten the tensor to 1D
+    flattened_tensor = tensor.flatten().cpu().numpy()
+
+    # Step 2: Discretize the values by creating a histogram with `num_bins` bins
+    hist, bin_edges = np.histogram(flattened_tensor, bins=256, density=True)
+
+    # Step 3: Calculate probabilities from the histogram
+    probabilities = hist / np.sum(hist)  # Normalize to sum to 1
+
+    # Step 4: Compute entropy
+    probabilities = probabilities[probabilities > 0]  # Remove zero probabilities
+
+    entropy = -np.sum(probabilities * np.log2(probabilities))
+
     return entropy
