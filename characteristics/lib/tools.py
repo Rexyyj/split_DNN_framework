@@ -129,23 +129,52 @@ def quantize_tensor(tensor):
     tensor_q = torch.floor(((tensor / normalize_base +1)/2)*256 )
     return tensor_q
 
+# def get_tensor_pictoriality(tensor):
+#     dct_tensor = dct.dct_2d(tensor.reshape(tensor.shape[0], tensor.shape[1]*tensor.shape[2]))
+#     # entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
+#     entropy = calculate_entropy_float_tensor(dct_tensor)
+#     return 1-entropy/8
+
 def get_tensor_pictoriality(tensor):
-    dct_tensor = dct.dct_2d(tensor)
-    # entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
-    entropy = calculate_entropy_float_tensor(dct_tensor)
-    return entropy/8
+    ents =[]
+    for i in range(tensor.shape[0]):
+        try:
+            entropy=calculate_entropy_float_tensor(dct.dct_2d(tensor[i]))
+            ents.append(1-entropy/8)
+        except:
+            pass
+    ents = np.array(ents)
+
+    return ents.mean() 
+
+
+# def get_tensor_regularity(tensor):
+#     # fft_tensor = torch.fft.fft(tensor[tensor!=0])
+#     # fft_tensor = dct.dct(tensor[tensor!=0])
+#     # fft_tensor = torch.fft.fft(tensor)
+#     # entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor[tensor!=0])))
+#     entropy = calculate_entropy_float_tensor(tensor[tensor!=0])
+#     return 1-entropy/8
+
 
 def get_tensor_regularity(tensor):
-    # fft_tensor = torch.fft.fft(tensor[tensor!=0])
-    # fft_tensor = dct.dct(tensor[tensor!=0])
-    # fft_tensor = torch.fft.fft(tensor)
-    # entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor[tensor!=0])))
-    entropy = calculate_entropy_float_tensor(tensor)
-    return entropy/8
+    ents =[]
+    for i in range(tensor.shape[0]):
+        t = tensor[i][tensor[i]!=0]
+        try:
+            entropy=calculate_entropy_float_tensor(dct.dct(t))
+            ents.append(1-entropy/8)
+        except:
+            pass
+    ents = np.array(ents)
 
-# def get_tensor_entropy(tensor):
-#     entropy = torch.sum(torch.special.entr(get_probability_tensor(tensor)))
-#     return entropy/5.544
+    return ents.mean() 
+
+def get_tensor_decomposability(tensor):
+    tensor_rank = calculate_slice_avg_rank(tensor)
+    d = 1-(tensor_rank*tensor.shape[1]+tensor_rank*tensor.shape[2])*tensor.shape[0]/(tensor.numel())
+    return d
+
 
 def calculate_entropy_float_tensor(tensor):
     # Step 1: Flatten the tensor to 1D
@@ -163,3 +192,17 @@ def calculate_entropy_float_tensor(tensor):
     entropy = -np.sum(probabilities * np.log2(probabilities))
 
     return entropy
+
+
+def sliding_window_mean(tensor, window_size):
+    # Ensure that the window size is less than or equal to the length of the tensor
+    if window_size > tensor.size(0):
+        raise ValueError("Window size must be less than or equal to the length of the tensor.")
+    
+    # Create sliding windows using unfold (returns a tensor with windows of size 'window_size')
+    windows = tensor.unfold(0, window_size, 1)
+    
+    # Compute the mean for each window
+    sliding_mean = windows.mean(dim=1)
+    
+    return sliding_mean
