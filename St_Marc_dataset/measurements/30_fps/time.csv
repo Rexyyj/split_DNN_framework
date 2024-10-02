@@ -1,0 +1,2 @@
+pruning_thresh,jepg_quality,head_time_mean,head_time_std,tail_time_mean,tail_time_std,framework_time_mean,framework_time_std,jpeg_time_mean,jpeg_time_std,encode_time_mean,encode_time_std,decode_time_mean,decode_time_std,request_time_mean,request_time_std
+0.0,100,16.46831642150879,0.80247608412967,3.882532479763031,0.031274577255989464,1.7394415998458863,0.09648533434984302,6.70032961845398,0.25667837314928027,10.723701782226563,0.3505226042341686,0.971926401257515,0.04612905401427542,18.054104652404785,0.8000136555161276

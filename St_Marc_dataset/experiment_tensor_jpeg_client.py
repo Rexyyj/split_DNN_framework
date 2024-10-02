@@ -22,11 +22,11 @@ from torchmetrics.detection import MeanAveragePrecision
 from torch.profiler import profile, record_function, ProfilerActivity
 ################################### Varialbe init ###################################
 frame_path = "./frames/30_fps/"
-label_path = "../labels/30_fps.csv"
-log_dir = "../measurements/30_fps/"
+label_path = "./labels/30_fps.csv"
+log_dir = "./measurements/30_fps/"
 # video_files = os.listdir(video_path)
 # video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 10
+N_frame = 105
 N_warmup = 5
 split_layer= int(sys.argv[1])
 
@@ -35,7 +35,7 @@ service_uri = "http://10.0.1.34:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.34:8090/reset"
 
 
-measurement_path = log_dir+test_case+"/"
+measurement_path = log_dir+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
 
@@ -66,13 +66,10 @@ elif split_layer==1:
     dummy_head_tensor = torch.rand([1, 16, 416, 416])
 ################################### Clean Old Logs ###################################
 try:
-    path = os.path.join(log_dir,test_case)
-    os.mkdir(path)
+    os.mkdir(log_dir)
 except:
-    os.system("rm -rf "+measurement_path)
-    time.sleep(3)
-    path = os.path.join(log_dir,test_case)
-    os.mkdir(path)
+    os.system("rm -rf "+log_dir)
+    os.mkdir(log_dir)
         
 
 with open(map_output_path,'a') as f:
@@ -157,6 +154,7 @@ def load_video_frames(frame_dir, samples_number=-1): #samples_number = -1 to loa
             test_frames.append(frame)
     else:
         for test_file in files[0:samples_number]:
+            print(frame_dir+test_file)
             frame = cv2.imread(frame_dir+test_file)
             frame = cv2.resize(frame,(416,416),interpolation = cv2.INTER_AREA)
             test_frames.append(frame)
@@ -168,7 +166,7 @@ def load_video_frames(frame_dir, samples_number=-1): #samples_number = -1 to loa
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/checkpoints/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -192,7 +190,7 @@ if __name__ == "__main__":
             frame_predicts = []
             # thresh = 0.02*(j+1)
             # quality =60+10*i
-            thresh = 0.01
+            thresh = 0.0
             quality =100
             print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
             sf = SplitFramework(device="cuda")
@@ -227,6 +225,7 @@ if __name__ == "__main__":
                         framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                         r = requests.post(url=service_uri, data=data_to_trans)
                         response = pickle.loads(r.content)
+                        print(response)
                         continue
                     #####  Warmup phase #####
 
@@ -263,7 +262,7 @@ if __name__ == "__main__":
                 decode_time.append(response["decode_time"])
                 ##################### 
                 detection = response["detection"]
-
+                print(detection)
                 if len(detection[0])!= 0:
                     pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
                                 scores=tensor(detection[0].numpy()[:,4]),
