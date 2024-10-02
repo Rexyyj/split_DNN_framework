@@ -154,7 +154,6 @@ def load_video_frames(frame_dir, samples_number=-1): #samples_number = -1 to loa
             test_frames.append(frame)
     else:
         for test_file in files[0:samples_number]:
-            print(frame_dir+test_file)
             frame = cv2.imread(frame_dir+test_file)
             frame = cv2.resize(frame,(416,416),interpolation = cv2.INTER_AREA)
             test_frames.append(frame)
