@@ -26,7 +26,7 @@ label_path = "./labels/30_fps.csv"
 log_dir = "./measurements/30_fps/"
 # video_files = os.listdir(video_path)
 # video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 105
+N_frame = 50
 N_warmup = 5
 
 test_case = "tensor_jpeg"
@@ -119,28 +119,28 @@ if __name__ == "__main__":
     for index in range(len(test_frames)):
         frame = test_frames[index]
 
-
-        ##### Head Model #####
-        time_start.record()
-        frame_tensor = convert_rgb_frame_to_tensor(frame)
-        head_tensor = model(frame_tensor, 1)
-        inference_result = model(head_tensor,2)
-        detection = non_max_suppression(inference_result, 0.3, 0.3)
-        time_end.record()
-        torch.cuda.synchronize()
-        head_time.append(time_start.elapsed_time(time_end))
-        ##### Head Model #####
+        with torch.no_grad():
+            ##### Head Model #####
+            time_start.record()
+            frame_tensor = convert_rgb_frame_to_tensor(frame)
+            head_tensor = model(frame_tensor, 1)
+            inference_result = model(head_tensor,2)
+            detection = non_max_suppression(inference_result, 0.5, 0.5)
+            time_end.record()
+            torch.cuda.synchronize()
+            head_time.append(time_start.elapsed_time(time_end))
+            ##### Head Model #####
     
-        print(detection)
-        if len(detection[0])!= 0:
-            pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
+            print(detection)
+            if len(detection[0])!= 0:
+                pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
                         scores=tensor(detection[0].numpy()[:,4]),
                         labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
-        else:
-            pred = dict(boxes=tensor([]),
+            else:
+                pred = dict(boxes=tensor([]),
                         scores=tensor([]),
                         labels=tensor([],dtype=torch.int32),)
-        frame_predicts.append(pred)
+            frame_predicts.append(pred)
     metric = MeanAveragePrecision(iou_type="bbox") 
     metric.update(frame_predicts, frame_labels[0:N_frame])
     maps = metric.compute()
