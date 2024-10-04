@@ -45,8 +45,8 @@ class SplitFramework():
     def set_pruning_threshold(self, threshold):
         self.pruning_threshold = threshold
     
-    def set_jpeg_quality(self, quality):
-        self.jpeg_quality =  quality
+    def set_quality(self, quality):
+        self.quality =  quality
 
     def calculate_snr(self,original_signal, reconstructed_signal):
         # Calculate the noise signal
@@ -75,7 +75,7 @@ class SplitFramework():
         tensor_normal = tensor_normal.to(torch.uint8).reshape((self.tensor_shape[1],self.tensor_shape[2]*self.tensor_shape[3],1))
 
         # JPEG encoding/decoding
-        encoded_data = simplejpeg.encode_jpeg(tensor_normal.cpu().numpy().astype(np.uint8),self.jpeg_quality,'GRAY')
+        encoded_data = simplejpeg.encode_jpeg(tensor_normal.cpu().numpy().astype(np.uint8),self.quality,'GRAY')
         # self.data_size.append(transfer_data.shape[0])
         decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded_data,"GRAY")).to(self.device)
         # # Reconstruct diff tensor
