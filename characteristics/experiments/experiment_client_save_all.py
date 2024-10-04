@@ -14,8 +14,8 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
-# from split_framework.yolov3_tensor_jpeg_chara import SplitFramework
-from split_framework.yolov3_tensor_regression_chara import SplitFramework
+from split_framework.yolov3_tensor_jpeg_chara import SplitFramework
+# from split_framework.yolov3_tensor_regression_chara import SplitFramework
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
@@ -31,7 +31,7 @@ N_frame = 25
 N_warmup = 5
 split_layer= int(sys.argv[1])
 
-test_case = "tensor_regression"
+test_case = "tensor_jpeg_all"
 service_uri = "http://10.0.1.34:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.34:8090/reset"
 
@@ -81,43 +81,11 @@ with open(map_output_path,'a') as f:
             "pruning_thresh,"
             "jepg_quality,"
             "data_size_mean,"
-            "data_size_std,"
             "sparsity,"
             "decomposability,"
             "regularity,"
             "pictoriality,"
-            "map,"
-            "map_50,"
-            "map_75,"
-            "map_small,"
-            "map_medium,"
-            "map_large,"
-            "mar_1,"
-            "mar_100,"
-            "mar_small,"
-            "mar_medium,"
-            "mar_large\n")
-    f.write(title)
-
-with open(time_output_path,'a') as f:
-    title = ("video_name,"
-            "pruning_thresh,"
-            "jepg_quality,"
-            "head_time_mean,"
-            "head_time_std,"
-            "tail_time_mean,"
-            "tail_time_std,"
-            "framework_time_mean,"
-            "framework_time_std,"
-            "jpeg_time_mean,"
-            "jpeg_time_std,"
-            "encode_time_mean,"
-            "encode_time_std,"
-            "decode_time_mean,"
-            "decode_time_std,"
-            "request_time_mean,"
-            "request_time_std\n"
-            )
+            "map_50\n")
     f.write(title)
 
 ################################### Utility functions ###################################
@@ -185,8 +153,8 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for j in range(5):
-            for i in range(5):
+        for j in range(1):
+            for i in range(1):
                 reset_required = True
                 while reset_required:
                     r = requests.post(url=reset_uri)
@@ -199,10 +167,10 @@ if __name__ == "__main__":
 
                 
                 frame_predicts = []
-                thresh = 0.0 * (j+1)
-                quality =i+1
                 # thresh = 0.0 * (j+1)
-                # quality =60 + i*10
+                # quality =i+1
+                thresh = 0.0 * (j+1)
+                quality =60 + i*10
                 print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
                 sf = SplitFramework(device="cuda")
                 sf.set_reference_tensor(dummy_head_tensor)
@@ -225,6 +193,7 @@ if __name__ == "__main__":
                 decomposability =[]
                 regularity =[]
                 pictoriality =[]
+                map_50 =[]
                 #####################################################################
                 for index in range(len(test_frames)):
                     inWarmup = True
@@ -286,55 +255,27 @@ if __name__ == "__main__":
                         pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
                                     scores=tensor(detection[0].numpy()[:,4]),
                                     labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
+                        metric = MeanAveragePrecision(iou_type="bbox") 
+                        metric.update([pred], [frame_labels[index]])
+                        maps = metric.compute()
+                        print(maps)
+                        map_50.append(maps["map_50"].item())
+                        
                     else:
                         pred = dict(boxes=tensor([]),
                                     scores=tensor([]),
                                     labels=tensor([],dtype=torch.int32),)
-                    frame_predicts.append(pred)
-                metric = MeanAveragePrecision(iou_type="bbox") 
-                metric.update(frame_predicts, frame_labels[N_warmup:N_frame])
-                maps = metric.compute()
+                        map_50.append(0)
+                        
 
-                with open(map_output_path,'a') as f:
-                    f.write(video_name+","
-                            +str(thresh)+","
-                            +str(quality)+","
-                            +str(np.array(transfer_data_size).mean())+","
-                            +str(np.array(transfer_data_size).std())+","
-                            +str(np.array(sparsity).mean())+","
-                            +str(np.array(decomposability).mean())+","
-                            +str(np.array(regularity).mean())+","
-                            +str(np.array(pictoriality).mean())+","
-                            +str(maps["map"].item())+","
-                            +str(maps["map_50"].item())+","
-                            +str(maps["map_75"].item())+","
-                            +str(maps["map_small"].item())+","
-                            +str(maps["map_medium"].item())+","
-                            +str(maps["map_large"].item())+","
-                            +str(maps["mar_1"].item())+","
-                            +str(maps["mar_100"].item())+","
-                            +str(maps["mar_small"].item())+","
-                            +str(maps["mar_medium"].item())+","
-                            +str(maps["mar_large"].item())+"\n"
-                            )
-                    
-                with open(time_output_path,'a') as f:
-                    f.write(video_name+","
-                            +str(thresh)+","
-                            +str(quality)+","
-                            +str(np.array(head_time).mean())+","
-                            +str(np.array(head_time).std())+","
-                            +str(np.array(tail_time).mean())+","
-                            +str(np.array(tail_time).std())+","
-                            +str(np.array(framework_time).mean())+","
-                            +str(np.array(framework_time).std())+","
-                            +str(np.array(jpeg_time).mean())+","
-                            +str(np.array(jpeg_time).std())+","
-                            +str(np.array(encode_time).mean())+","
-                            +str(np.array(encode_time).std())+","
-                            +str(np.array(decode_time).mean())+","
-                            +str(np.array(decode_time).std())+","
-                            +str(np.array(request_time).mean())+","
-                            +str(np.array(request_time).std())+"\n"
-                    )
-                    
+                    with open(map_output_path,'a') as f:
+                        f.write(video_name+","
+                                +str(thresh)+","
+                                +str(quality)+","
+                                +str(transfer_data_size[-1])+","
+                                +str(sparsity[-1])+","
+                                +str(decomposability[-1])+","
+                                +str(regularity[-1])+","
+                                +str(pictoriality[-1])+","
+                                +str(map_50[-1])+"\n"
+                                )
