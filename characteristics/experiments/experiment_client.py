@@ -14,8 +14,8 @@ import torch
 import torchvision.ops.boxes as bops
 import os
 from torch import tensor
-# from split_framework.yolov3_tensor_jpeg_chara import SplitFramework
-from split_framework.yolov3_tensor_regression_chara import SplitFramework
+from split_framework.yolov3_tensor_jpeg_chara import SplitFramework
+# from split_framework.yolov3_tensor_regression_chara import SplitFramework
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
@@ -185,8 +185,8 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for j in range(1):
-            for i in range(1):
+        for j in range(5):
+            for i in range(5):
                 reset_required = True
                 while reset_required:
                     r = requests.post(url=reset_uri)
@@ -199,8 +199,10 @@ if __name__ == "__main__":
 
                 
                 frame_predicts = []
-                thresh = 0.01
-                quality =3
+                # thresh = 0.0 * (j+1)
+                # quality =i+1
+                thresh = 0.0 * (j+1)
+                quality =60 + i*10
                 print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
                 sf = SplitFramework(device="cuda")
                 sf.set_reference_tensor(dummy_head_tensor)
