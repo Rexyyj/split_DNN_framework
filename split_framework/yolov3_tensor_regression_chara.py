@@ -45,8 +45,8 @@ class SplitFramework():
     def set_pruning_threshold(self, threshold):
         self.pruning_threshold = threshold
     
-    def set_jpeg_quality(self, quality):
-        self.jpeg_quality =  quality
+    def set_quality(self, quality):
+        self.quality =  quality
 
     def calculate_snr(self,original_signal, reconstructed_signal):
         # Calculate the noise signal
@@ -84,7 +84,7 @@ class SplitFramework():
                 x_pos.append(mask)
                 x_neg.append(t<0)
                 compressed_size +=  tensor.shape[1]*tensor.shape[2]/4 + polynominal*4
-            reconstructed_tensor = self.decompressor_regression(tensor.shape,factors, x_pos, x_neg)
+        reconstructed_tensor = self.decompressor_regression(tensor.shape,factors, x_pos, x_neg)
         return factors, x_pos, x_neg, compressed_size,reconstructed_tensor
 
 
@@ -124,7 +124,7 @@ class SplitFramework():
 
             ## encoding
             self.time_start.record()
-            factors, x_pos, x_neg, compressed_size,reconstructed_tensor = self.jpeg_encode(pruned_tensor[0])
+            factors, x_pos, x_neg, compressed_size,reconstructed_tensor = self.compressor_regression(pruned_tensor[0].cpu(),self.quality)
             self.time_end.record()
             torch.cuda.synchronize()
             jpeg_encoding_time = self.time_start.elapsed_time(self.time_end)
@@ -134,16 +134,16 @@ class SplitFramework():
                 "factor": factors,
                 "x_pos":x_pos,
                 "x_neg": x_neg,
-                "tensor_shape":head_tensor.shape()
+                "tensor_shape":head_tensor.shape
             }
             # updte the reference tensor
-            self.reference_tensor = self.reference_tensor + reconstructed_tensor.reshape(head_tensor.shape())
+            self.reference_tensor = self.reference_tensor + reconstructed_tensor.cuda().reshape(head_tensor.shape)
 
         return operation_time,jpeg_encoding_time,pickle.dumps(payload)
 
     def split_framework_decode(self,dic):
-        reconstructed_tensor = self.decompressor_regression(dic["tensor_shape"],dic["factor"],dic["x_pos"],dic["x_neg"])
-        reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
+        reconstructed_tensor = self.decompressor_regression(dic["tensor_shape"][1:3],dic["factor"],dic["x_pos"],dic["x_neg"])
+        reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor.cuda().reshape(dic["tensor_shape"])
         self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
 
