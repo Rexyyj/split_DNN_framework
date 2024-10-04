@@ -1,6 +1,6 @@
 ################################### setting path ###################################
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 ################################### import libs ###################################
 import cv2
 from  pytorchyolo import detect, models_split_tiny
@@ -24,7 +24,9 @@ from torch.profiler import profile, record_function, ProfilerActivity
 video_path = "../../dataset/test/"
 label_path = "../../dataset/test_label/"
 video_files = os.listdir(video_path)
-video_name="b4fe0b47-a7819060"
+# video_files = os.listdir(video_path)
+# video_names = [name.replace('.mov','') for name in video_files]
+video_names =["b4fe0b47-a7819060"]
 N_frame = 25
 N_warmup = 5
 split_layer= int(sys.argv[1])
@@ -33,7 +35,7 @@ test_case = "tensor_jpeg"
 service_uri = "http://10.0.1.34:8090/tensor_jpeg"
 reset_uri = "http://10.0.1.34:8090/reset"
 
-log_dir = "./measurements/layer_"+str(split_layer)+"/"
+log_dir = "../measurements/layer_"+str(split_layer)+"/"
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
@@ -178,160 +180,160 @@ if __name__ == "__main__":
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
-    # Load videos
+    for video_name in video_names:
+        print("Testing with video: "+video_name)
+        test_frames = load_video_frames(video_path,video_name, N_frame)
+        frame_labels = load_ground_truth(video_name)
 
-    test_frames = load_video_frames(video_path,video_name, N_frame)
-    frame_labels = load_ground_truth(video_name)
+        for j in range(1):
+            for i in range(1):
+                reset_required = True
+                while reset_required:
+                    r = requests.post(url=reset_uri)
+                    result = pickle.loads(r.content)
+                    if result["reset_status"] == True:
+                        reset_required = False
+                    else:
+                        print("Reset edge reference tensor failed...")
+                    time.sleep(1)
 
-    for j in range(1):
-        for i in range(1):
-            reset_required = True
-            while reset_required:
-                r = requests.post(url=reset_uri)
-                result = pickle.loads(r.content)
-                if result["reset_status"] == True:
-                    reset_required = False
-                else:
-                    print("Reset edge reference tensor failed...")
-                time.sleep(1)
+                
+                frame_predicts = []
+                thresh = 0.02*(j+1)
+                quality =60+10*i
+                print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
+                sf = SplitFramework(device="cuda")
+                sf.set_reference_tensor(dummy_head_tensor)
+                sf.set_pruning_threshold(thresh)
+                sf.set_jpeg_quality(quality)
 
-            
-            frame_predicts = []
-            thresh = 0.02*(j+1)
-            quality =60+10*i
-            print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
-            sf = SplitFramework(device="cuda")
-            sf.set_reference_tensor(dummy_head_tensor)
-            sf.set_pruning_threshold(thresh)
-            sf.set_jpeg_quality(quality)
+                time_start = torch.cuda.Event(enable_timing=True)
+                time_end = torch.cuda.Event(enable_timing=True)
+                ################## Init measurement lists ##########################
+                transfer_data_size =[]
 
-            time_start = torch.cuda.Event(enable_timing=True)
-            time_end = torch.cuda.Event(enable_timing=True)
-            ################## Init measurement lists ##########################
-            transfer_data_size =[]
+                head_time =[]
+                tail_time =[]
+                encode_time=[]
+                decode_time=[]
+                request_time=[]
+                framework_time=[]
+                jpeg_time = []
+                sparsity = []
+                decomposability =[]
+                regularity =[]
+                pictoriality =[]
+                #####################################################################
+                for index in range(len(test_frames)):
+                    inWarmup = True
+                    if index+1 > N_warmup:
+                        inWarmup = False
+                    frame = test_frames[index]
+                    ################## Perform Object detection #############################
+                    with torch.no_grad():
+                        #####  Warmup phase #####
+                        if inWarmup:
+                            frame_tensor = convert_rgb_frame_to_tensor(frame)
+                            head_tensor = model(frame_tensor, 1)
+                            framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                            r = requests.post(url=service_uri, data=data_to_trans)
+                            response = pickle.loads(r.content)
+                            continue
+                        #####  Warmup phase #####
 
-            head_time =[]
-            tail_time =[]
-            encode_time=[]
-            decode_time=[]
-            request_time=[]
-            framework_time=[]
-            jpeg_time = []
-            sparsity = []
-            decomposability =[]
-            regularity =[]
-            pictoriality =[]
-            #####################################################################
-            for index in range(len(test_frames)):
-                inWarmup = True
-                if index+1 > N_warmup:
-                    inWarmup = False
-                frame = test_frames[index]
-                ################## Perform Object detection #############################
-                with torch.no_grad():
-                    #####  Warmup phase #####
-                    if inWarmup:
+                        ##### Head Model #####
+                        time_start.record()
                         frame_tensor = convert_rgb_frame_to_tensor(frame)
                         head_tensor = model(frame_tensor, 1)
-                        framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                        torch.save(head_tensor, "./tensors/tensor_l8_"+video_name+str(index)+".pt")
+                        time_end.record()
+                        torch.cuda.synchronize()
+                        head_time.append(time_start.elapsed_time(time_end))
+                        ##### Head Model #####
+                    
+                        ##### Framework Encoding #####
+                        time_start.record()
+                        framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor,characteristic=True)
+                        time_end.record()
+                        torch.cuda.synchronize()
+                        sp,de,re,pi = sf.get_tensor_characteristics()
+                        sparsity.append(sp)
+                        decomposability.append(de)
+                        regularity.append(re)
+                        pictoriality.append(pi)
+                        encode_time.append(time_start.elapsed_time(time_end))
+                        transfer_data_size.append(len(data_to_trans))
+                        framework_time.append(framework_t)
+                        jpeg_time.append(jpeg_t)
+                        ##### Framework Encoding #####
+
+                        ##### Send request #####
+                        time_start.record()
                         r = requests.post(url=service_uri, data=data_to_trans)
                         response = pickle.loads(r.content)
-                        continue
-                    #####  Warmup phase #####
+                        time_end.record()
+                        torch.cuda.synchronize()
+                        request_time.append(time_start.elapsed_time(time_end))
+                        ##### Send request #####
+                    ##################### Collect resource usage ##########################
+                    tail_time.append(response["tail_time"])
+                    decode_time.append(response["decode_time"])
+                    ##################### 
+                    detection = response["detection"]
 
-                    ##### Head Model #####
-                    time_start.record()
-                    frame_tensor = convert_rgb_frame_to_tensor(frame)
-                    head_tensor = model(frame_tensor, 1)
-                    torch.save(head_tensor, "./tensors/tensor_l8_"+video_name+str(index)+".pt")
-                    time_end.record()
-                    torch.cuda.synchronize()
-                    head_time.append(time_start.elapsed_time(time_end))
-                    ##### Head Model #####
-                
-                    ##### Framework Encoding #####
-                    time_start.record()
-                    framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor,characteristic=True)
-                    time_end.record()
-                    torch.cuda.synchronize()
-                    sp,de,re,pi = sf.get_tensor_characteristics()
-                    sparsity.append(sp)
-                    decomposability.append(de)
-                    regularity.append(re)
-                    pictoriality.append(pi)
-                    encode_time.append(time_start.elapsed_time(time_end))
-                    transfer_data_size.append(len(data_to_trans))
-                    framework_time.append(framework_t)
-                    jpeg_time.append(jpeg_t)
-                    ##### Framework Encoding #####
+                    if len(detection[0])!= 0:
+                        pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
+                                    scores=tensor(detection[0].numpy()[:,4]),
+                                    labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
+                    else:
+                        pred = dict(boxes=tensor([]),
+                                    scores=tensor([]),
+                                    labels=tensor([],dtype=torch.int32),)
+                    frame_predicts.append(pred)
+                metric = MeanAveragePrecision(iou_type="bbox") 
+                metric.update(frame_predicts, frame_labels[N_warmup:N_frame])
+                maps = metric.compute()
 
-                    ##### Send request #####
-                    time_start.record()
-                    r = requests.post(url=service_uri, data=data_to_trans)
-                    response = pickle.loads(r.content)
-                    time_end.record()
-                    torch.cuda.synchronize()
-                    request_time.append(time_start.elapsed_time(time_end))
-                    ##### Send request #####
-                ##################### Collect resource usage ##########################
-                tail_time.append(response["tail_time"])
-                decode_time.append(response["decode_time"])
-                ##################### 
-                detection = response["detection"]
-
-                if len(detection[0])!= 0:
-                    pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
-                                scores=tensor(detection[0].numpy()[:,4]),
-                                labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
-                else:
-                    pred = dict(boxes=tensor([]),
-                                scores=tensor([]),
-                                labels=tensor([],dtype=torch.int32),)
-                frame_predicts.append(pred)
-            metric = MeanAveragePrecision(iou_type="bbox") 
-            metric.update(frame_predicts, frame_labels[N_warmup:N_frame])
-            maps = metric.compute()
-
-            with open(map_output_path,'a') as f:
-                f.write(video_name+","
-                        +str(thresh)+","
-                        +str(quality)+","
-                        +str(np.array(transfer_data_size).mean())+","
-                        +str(np.array(transfer_data_size).std())+","
-                        +str(np.array(sparsity).mean())+","
-                        +str(np.array(decomposability).mean())+","
-                        +str(np.array(regularity).mean())+","
-                        +str(np.array(pictoriality).mean())+","
-                        +str(maps["map"].item())+","
-                        +str(maps["map_50"].item())+","
-                        +str(maps["map_75"].item())+","
-                        +str(maps["map_small"].item())+","
-                        +str(maps["map_medium"].item())+","
-                        +str(maps["map_large"].item())+","
-                        +str(maps["mar_1"].item())+","
-                        +str(maps["mar_100"].item())+","
-                        +str(maps["mar_small"].item())+","
-                        +str(maps["mar_medium"].item())+","
-                        +str(maps["mar_large"].item())+"\n"
-                        )
-                
-            with open(time_output_path,'a') as f:
-                f.write(video_name+","
-                        +str(thresh)+","
-                        +str(quality)+","
-                        +str(np.array(head_time).mean())+","
-                        +str(np.array(head_time).std())+","
-                        +str(np.array(tail_time).mean())+","
-                        +str(np.array(tail_time).std())+","
-                        +str(np.array(framework_time).mean())+","
-                        +str(np.array(framework_time).std())+","
-                        +str(np.array(jpeg_time).mean())+","
-                        +str(np.array(jpeg_time).std())+","
-                        +str(np.array(encode_time).mean())+","
-                        +str(np.array(encode_time).std())+","
-                        +str(np.array(decode_time).mean())+","
-                        +str(np.array(decode_time).std())+","
-                        +str(np.array(request_time).mean())+","
-                        +str(np.array(request_time).std())+"\n"
-                )
-                
+                with open(map_output_path,'a') as f:
+                    f.write(video_name+","
+                            +str(thresh)+","
+                            +str(quality)+","
+                            +str(np.array(transfer_data_size).mean())+","
+                            +str(np.array(transfer_data_size).std())+","
+                            +str(np.array(sparsity).mean())+","
+                            +str(np.array(decomposability).mean())+","
+                            +str(np.array(regularity).mean())+","
+                            +str(np.array(pictoriality).mean())+","
+                            +str(maps["map"].item())+","
+                            +str(maps["map_50"].item())+","
+                            +str(maps["map_75"].item())+","
+                            +str(maps["map_small"].item())+","
+                            +str(maps["map_medium"].item())+","
+                            +str(maps["map_large"].item())+","
+                            +str(maps["mar_1"].item())+","
+                            +str(maps["mar_100"].item())+","
+                            +str(maps["mar_small"].item())+","
+                            +str(maps["mar_medium"].item())+","
+                            +str(maps["mar_large"].item())+"\n"
+                            )
+                    
+                with open(time_output_path,'a') as f:
+                    f.write(video_name+","
+                            +str(thresh)+","
+                            +str(quality)+","
+                            +str(np.array(head_time).mean())+","
+                            +str(np.array(head_time).std())+","
+                            +str(np.array(tail_time).mean())+","
+                            +str(np.array(tail_time).std())+","
+                            +str(np.array(framework_time).mean())+","
+                            +str(np.array(framework_time).std())+","
+                            +str(np.array(jpeg_time).mean())+","
+                            +str(np.array(jpeg_time).std())+","
+                            +str(np.array(encode_time).mean())+","
+                            +str(np.array(encode_time).std())+","
+                            +str(np.array(decode_time).mean())+","
+                            +str(np.array(decode_time).std())+","
+                            +str(np.array(request_time).mean())+","
+                            +str(np.array(request_time).std())+"\n"
+                    )
+                    
