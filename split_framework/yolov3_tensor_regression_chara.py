@@ -63,33 +63,43 @@ class SplitFramework():
         
         return SNR_dB
     
-    def jpeg_encode(self,tensor):
-        # Normalize & Quantize Config
-        normalize_base =torch.abs(tensor).max()
-        tensor_normal = tensor / normalize_base
-        scale, zero_point = (tensor_normal.max()-tensor_normal.min())/255,127
-        dtype = torch.quint8
+    def compressor_regression(self, tensor, polynominal):
+        factors= []
+        x_pos = []
+        x_neg = []
+        x_raw = np.arange(0,tensor.shape[1]*tensor.shape[2])
+        compressed_size =0
+        for i in range(tensor.shape[0]):
+            if torch.linalg.matrix_rank(tensor[i]).item() == 0:
+                factors.append([])
+                x_pos.append(0)
+                x_neg.append(0)
+            else:
+                t = tensor[i].reshape(tensor.shape[1]*tensor.shape[2])
+                mask = t!=0
+                y = abs(t[mask])
+                x=x_raw[mask]
+                m = np.polyfit(x,y,polynominal)
+                factors.append(m)
+                x_pos.append(mask)
+                x_neg.append(t<0)
+                compressed_size +=  tensor.shape[1]*tensor.shape[2]/4 + polynominal*4
+            reconstructed_tensor = self.decompressor_regression(tensor.shape,factors, x_pos, x_neg)
+        return factors, x_pos, x_neg, compressed_size,reconstructed_tensor
 
-        tensor_normal = torch.quantize_per_tensor(tensor_normal, scale, zero_point, dtype)
-        tensor_normal = tensor_normal.int_repr()
-        tensor_normal = tensor_normal.to(torch.uint8).reshape((self.tensor_shape[1],self.tensor_shape[2]*self.tensor_shape[3],1))
 
-        # JPEG encoding/decoding
-        encoded_data = simplejpeg.encode_jpeg(tensor_normal.cpu().numpy().astype(np.uint8),self.jpeg_quality,'GRAY')
-        # self.data_size.append(transfer_data.shape[0])
-        decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded_data,"GRAY")).to(self.device)
-        # # Reconstruct diff tensor
-        reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
-        reconstructed_tensor = (reconstructed_tensor.to(torch.float)-zero_point) * scale * normalize_base
-        # snr = self.calculate_snr(reconstructed_tensor.reshape(self.tensor_size).cpu().numpy() , tensor.reshape(self.tensor_size).cpu().numpy())
-        # self.reconstruct_error.append(snr)
-        return normalize_base, scale,zero_point, encoded_data, reconstructed_tensor
-
-
-    def jpeg_decode(self, tensor_dict):
-        decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(tensor_dict["encoded"],"GRAY")).to(self.device)
-        reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
-        reconstructed_tensor = (reconstructed_tensor.to(torch.float)-tensor_dict["zero"]) * tensor_dict["scale"] * tensor_dict["normal"]
+    def decompressor_regression(self,tensor_shape,factors, x_pos, x_neg):
+        x_raw = np.arange(0,tensor_shape[1]*tensor_shape[2])
+        reconstructed_tensor = torch.zeros(tensor_shape, device="cpu")
+        for i in range(tensor_shape[0]):
+            if len(factors[i]) != 0:
+                recon = np.zeros((tensor_shape[1]*tensor_shape[2]))
+                # print(factors[i])
+                # y_pred = factors[i].predict(PolynomialFeatures(degree=self.regression_factor, include_bias=False).fit_transform( x_raw[x_pos[i]].reshape(-1,1)))
+                y_pred = np.polyval(factors[i],x_raw[x_pos[i]])
+                recon[x_pos[i]] = y_pred
+                recon[x_raw[x_neg[i]]] = -recon[x_raw[x_neg[i]]]
+                reconstructed_tensor[i] = torch.from_numpy(recon.reshape((tensor_shape[1],tensor_shape[2])))
         return reconstructed_tensor
 
     def split_framework_encode(self,id, head_tensor, characteristic=False):
@@ -112,27 +122,27 @@ class SplitFramework():
                 self._pictoriality=get_tensor_pictoriality(pruned_tensor[0])
                 self._regularity = get_tensor_regularity(pruned_tensor[0])
 
-            ## Jpeg encoding
+            ## encoding
             self.time_start.record()
-            normalize_base, scale,zero_point, encoded_data, reconstructed_tensor = self.jpeg_encode(pruned_tensor)
+            factors, x_pos, x_neg, compressed_size,reconstructed_tensor = self.jpeg_encode(pruned_tensor[0])
             self.time_end.record()
             torch.cuda.synchronize()
             jpeg_encoding_time = self.time_start.elapsed_time(self.time_end)
 
             payload = {
                 "id" : id,
-                "normal": normalize_base,
-                "scale":scale,
-                "zero": zero_point,
-                "encoded": encoded_data
+                "factor": factors,
+                "x_pos":x_pos,
+                "x_neg": x_neg,
+                "tensor_shape":head_tensor.shape()
             }
             # updte the reference tensor
-            self.reference_tensor = self.reference_tensor + reconstructed_tensor
+            self.reference_tensor = self.reference_tensor + reconstructed_tensor.reshape(head_tensor.shape())
 
         return operation_time,jpeg_encoding_time,pickle.dumps(payload)
 
-    def split_framework_decode(self,tensor_dict):
-        reconstructed_tensor = self.jpeg_decode(tensor_dict)
+    def split_framework_decode(self,dic):
+        reconstructed_tensor = self.decompressor_regression(dic["tensor_shape"],dic["factor"],dic["x_pos"],dic["x_neg"])
         reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
         self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
