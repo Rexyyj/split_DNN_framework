@@ -134,7 +134,7 @@ class SplitFramework():
                 "factor": factors,
                 "x_pos":x_pos,
                 "x_neg": x_neg,
-                "tensor_shape":head_tensor.shape
+                "tensor_shape":head_tensor[0].shape
             }
             # updte the reference tensor
             self.reference_tensor = self.reference_tensor + reconstructed_tensor.cuda().reshape(head_tensor.shape)
@@ -142,8 +142,8 @@ class SplitFramework():
         return operation_time,jpeg_encoding_time,pickle.dumps(payload)
 
     def split_framework_decode(self,dic):
-        reconstructed_tensor = self.decompressor_regression(dic["tensor_shape"][1:3],dic["factor"],dic["x_pos"],dic["x_neg"])
-        reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor.cuda().reshape(dic["tensor_shape"])
+        reconstructed_tensor = self.decompressor_regression(dic["tensor_shape"],dic["factor"],dic["x_pos"],dic["x_neg"])
+        reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor.cuda().reshape(self.tensor_shape)
         self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
 
