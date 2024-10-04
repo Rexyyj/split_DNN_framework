@@ -85,7 +85,7 @@ with open(map_output_path,'a') as f:
             "sparsity,"
             "decomposability,"
             "regularity,"
-            "pictoriality"
+            "pictoriality,"
             "map,"
             "map_50,"
             "map_75,"
@@ -176,7 +176,7 @@ def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/checkpoints/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../../pytorchyolo/checkpoints/yolov3_ckpt_300.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -199,8 +199,8 @@ if __name__ == "__main__":
 
                 
                 frame_predicts = []
-                thresh = 0.02*(j+1)
-                quality =60+10*i
+                thresh = 0
+                quality =100
                 print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
                 sf = SplitFramework(device="cuda")
                 sf.set_reference_tensor(dummy_head_tensor)
@@ -245,7 +245,6 @@ if __name__ == "__main__":
                         time_start.record()
                         frame_tensor = convert_rgb_frame_to_tensor(frame)
                         head_tensor = model(frame_tensor, 1)
-                        torch.save(head_tensor, "./tensors/tensor_l8_"+video_name+str(index)+".pt")
                         time_end.record()
                         torch.cuda.synchronize()
                         head_time.append(time_start.elapsed_time(time_end))
@@ -280,7 +279,7 @@ if __name__ == "__main__":
                     decode_time.append(response["decode_time"])
                     ##################### 
                     detection = response["detection"]
-
+                    print(detection)
                     if len(detection[0])!= 0:
                         pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
                                     scores=tensor(detection[0].numpy()[:,4]),
