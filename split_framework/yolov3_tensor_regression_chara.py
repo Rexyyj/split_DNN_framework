@@ -164,17 +164,23 @@ def calculate_sparsity(tensor):
     sparsity = zero_num / tensor_size
     return sparsity
 
-def get_tensor_pictoriality(tensor):
-    ents =[]
-    for i in range(tensor.shape[0]):
-        try:
-            entropy=calculate_entropy_float_tensor(dct.dct_2d(tensor[i]))
-            ents.append(1-entropy/8)
-        except:
-            pass
-    ents = np.array(ents)
+# def get_tensor_pictoriality(tensor):
+#     ents =[]
+#     for i in range(tensor.shape[0]):
+#         try:
+#             entropy=calculate_entropy_float_tensor(dct.dct_2d(tensor[i]))
+#             ents.append(1-entropy/8)
+#         except:
+#             pass
+#     ents = np.array(ents)
 
-    return ents.mean() 
+#     return ents.mean() 
+def get_tensor_pictoriality(tensor):
+    dct_tensor = dct.dct_2d(tensor.reshape(tensor.shape[0], tensor.shape[1]*tensor.shape[2]))
+    # entropy = torch.sum(torch.special.entr(get_probability_tensor(dct_tensor)))
+    entropy = calculate_entropy_float_tensor(dct_tensor)
+    return 1-entropy/8
+
 
 def get_tensor_regularity(tensor):
     ents =[]
