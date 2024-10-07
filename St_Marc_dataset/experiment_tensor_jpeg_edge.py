@@ -53,7 +53,7 @@ class TailModelService:
     def __init__(self, split_layer,dummy_tensor) -> None:
         self.model = models_split_tiny.load_model(
             "../pytorchyolo/config/yolov3-tiny.cfg",
-            "../pytorchyolo/weights/yolov3-tiny.weights")
+            "./ckpt/yolov3_ckpt_300.pth")
         self.model.set_split_layer(split_layer) 
         self.model = self.model.eval()
         self.dummy_tensor = dummy_tensor
