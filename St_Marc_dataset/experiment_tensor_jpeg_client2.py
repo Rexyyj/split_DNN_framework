@@ -29,7 +29,7 @@ from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 testdata_path = "./data/test_0.txt"
 
 log_dir = "./measurements/30_fps/"
-N_warmup = 5
+N_warmup = 0
 split_layer= int(sys.argv[1])
 
 test_case = "tensor"
@@ -174,17 +174,17 @@ if __name__ == "__main__":
 
             labels = []
             sample_metrics = []  # List of tuples (TP, confs, pred)
-            warmup_counter = 0
-            for _, imgs, targets in tqdm.tqdm(dataloader, desc="Validating"):
+            frame_index = 0
+            for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
+                frame_index+=1
                 # Warmup phase
-                if warmup_counter < N_warmup:
-                    imgs = Variable(imgs.type(Tensor), requires_grad=False)
+                imgs = Variable(imgs.type(Tensor), requires_grad=False)
+                if frame_index <= N_warmup:
                     with torch.no_grad():
                         head_tensor = model(imgs, 1)
-                        framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                        framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(frame_index, head_tensor)
                         r = requests.post(url=service_uri, data=data_to_trans)
                         response = pickle.loads(r.content)
-                        warmup_counter+=1
                         continue
                 
                 # Real measurements
@@ -193,7 +193,6 @@ if __name__ == "__main__":
                 # Rescale target
                 targets[:, 2:] = xywh2xyxy(targets[:, 2:])
                 targets[:, 2:] *= 416
-                imgs = Variable(imgs.type(Tensor), requires_grad=False)
 
                 with torch.no_grad():
                     ##### Head Model #####
@@ -206,7 +205,7 @@ if __name__ == "__main__":
 
                     ##### Framework Encoding #####
                     time_start.record()
-                    framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                    framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(frame_index, head_tensor)
                     time_end.record()
                     torch.cuda.synchronize()
                     encode_time.append(time_start.elapsed_time(time_end))
@@ -226,8 +225,9 @@ if __name__ == "__main__":
                 tail_time.append(response["tail_time"])
                 decode_time.append(response["decode_time"])
                 detection = response["detection"]
+                print(detection)
                 sample_metrics += get_batch_statistics(detection, targets, iou_threshold=0.5)
-                print(sample_metrics)
+                # print(sample_metrics)
 
 
 

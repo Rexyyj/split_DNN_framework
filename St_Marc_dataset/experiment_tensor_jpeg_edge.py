@@ -99,7 +99,7 @@ class TailModelService:
                 ######## Framework decode ##########
                 self.time_start.record()
                 inference_result = self.model(reconstructed_head_tensor,2)
-                detection = non_max_suppression(inference_result, 0.5, 0.5)
+                detection = non_max_suppression(inference_result, 0.01, 0.5)
                 # print(detection)
                 self.time_end.record()
                 torch.cuda.synchronize()
