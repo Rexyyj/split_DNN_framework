@@ -26,7 +26,7 @@ from torchmetrics.detection import MeanAveragePrecision
 from torch.profiler import profile, record_function, ProfilerActivity
 ################################### Varialbe init ###################################
 frame_path = "./frames/30_fps/"
-label_path = "./labels/30_fps.csv"
+label_path = "./data/raw_labels/30_fps.csv"
 log_dir = "./measurements/30_fps/"
 # video_files = os.listdir(video_path)
 # video_names = [name.replace('.mov','') for name in video_files]
@@ -76,7 +76,7 @@ def sort_func(name):
 
 def load_video_frames(frame_dir, samples_number=-1): #samples_number = -1 to load all frames
     test_frames = []
-    dataset = ListDataset("./st_mark/test.txt", img_size=416, multiscale=False, transform=DEFAULT_TRANSFORMS)
+    dataset = ListDataset("./data/test_0.txt", img_size=416, multiscale=False, transform=DEFAULT_TRANSFORMS)
     dataloader = DataLoader(
         dataset,
         batch_size=1,
