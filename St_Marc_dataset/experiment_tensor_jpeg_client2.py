@@ -141,8 +141,8 @@ def print_eval_stats(metrics_output, class_names, verbose):
 
 if __name__ == "__main__":
     # Load Model
-    # model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","./ckpt/yolov3_ckpt_300.pth")
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
+    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","./ckpt/yolov3_ckpt_300.pth")
+    # model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -240,7 +240,7 @@ if __name__ == "__main__":
                 tail_time.append(response["tail_time"])
                 decode_time.append(response["decode_time"])
                 detection = response["detection"]
-                # print(detection)
+                print(detection)
                 sample_metrics += get_batch_statistics(detection, targets, iou_threshold=0.1)
         
         # Concatenate sample statistics
