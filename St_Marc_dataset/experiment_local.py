@@ -93,7 +93,7 @@ def load_video_frames(frame_dir, samples_number=-1): #samples_number = -1 to loa
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
+    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","./ckpt/yolov3_ckpt_300.pth")
     model.set_split_layer(7) # layer <7
     model = model.eval()
     
