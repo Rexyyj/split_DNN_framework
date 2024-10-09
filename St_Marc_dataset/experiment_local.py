@@ -3,92 +3,70 @@ import sys
 sys.path.append('../')
 ################################### import libs ###################################
 import cv2
-from  pytorchyolo import detect, models_split_tiny
-from pytorchyolo.utils.transforms import Resize, DEFAULT_TRANSFORMS
-import torchvision.transforms as transforms
+from  pytorchyolo import  models_split_tiny
 import numpy as np
-from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
 import pandas as pd
 import time
 import torch
-import torchvision.ops.boxes as bops
 import os
 from torch import tensor
 from split_framework.yolov3_tensor_jpeg_v2 import SplitFramework
 
 import requests
 import pickle
-from torchmetrics.detection import MeanAveragePrecision
-from torch.profiler import profile, record_function, ProfilerActivity
-################################### Varialbe init ###################################
-frame_path = "./frames/30_fps/"
-label_path = "./labels/30_fps.csv"
-log_dir = "./measurements/30_fps/"
-# video_files = os.listdir(video_path)
-# video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 50
-N_warmup = 5
+import tqdm
+import numpy as np
 
-test_case = "tensor_jpeg"
+import torch
+from torch.utils.data import DataLoader
+from torch.autograd import Variable
+from terminaltables import AsciiTable
+from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, non_max_suppression, to_cpu, xywh2xyxy, print_environment_info
+from pytorchyolo.utils.datasets import ListDataset
+from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
+
+################################### Varialbe init ###################################
+testdata_path = "./data/test_0.txt"
+class_name_path = "./data/coco.names"
+log_dir = "./measurements/30_fps/"
+N_warmup = 0
+
+test_case = "tensor"
+service_uri = "http://10.0.1.34:8090/tensor"
+reset_uri = "http://10.0.1.34:8090/reset"
 
 
 measurement_path = log_dir+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
 
-
+# Note: model split layer should -1 for the actual split point
 
 ################################### Utility functions ###################################
-def convert_rgb_frame_to_tensor(image):
-    img_size = 416
-    # Configure input
-    input_img = transforms.Compose([
-    DEFAULT_TRANSFORMS,
-    Resize(img_size)])(
-        (image, np.zeros((1, 5))))[0].unsqueeze(0)
-    input_img = input_img.cuda()
+def create_data_loader(data_path):
+    dataset = ListDataset(data_path, img_size=416, multiscale=False, transform=DEFAULT_TRANSFORMS)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=dataset.collate_fn)
+    return dataloader
 
-    return input_img
 
-def load_ground_truth(gt_path):
-    frame_labels = []
-    df_gt = pd.read_csv(gt_path)
-    gt_group = df_gt.groupby("frame_id")
-    for key in gt_group.groups.keys():
-        df = gt_group.get_group(key)
-        labels = []
-        boxes = []
-        for i in range(len(df)):
-            row = df.iloc[i].to_list()
-            boxes.append(row[4:])
-            labels.append(row[2])
-
-        frame_labels.append(dict(boxes=tensor(boxes,dtype=torch.float32),labels=tensor(labels,dtype=torch.int32),) )
-    return frame_labels
-
-def sort_func(name):
-    num = name.split(".")[0].split("_")[1]
-    return int(num)
-
-def load_video_frames(frame_dir, samples_number=-1): #samples_number = -1 to load all frames
-    files = os.listdir(frame_dir)
-    files.sort(key=sort_func)
-
-    test_frames = []
-    if samples_number==-1:
-        for test_file in files:
-            frame = cv2.imread(frame_dir+test_file)
-            frame = cv2.resize(frame,(416,416),interpolation = cv2.INTER_AREA)
-            test_frames.append(frame)
+def print_eval_stats(metrics_output, class_names, verbose):
+    if metrics_output is not None:
+        precision, recall, AP, f1, ap_class = metrics_output
+        if verbose:
+            # Prints class AP and mean AP
+            ap_table = [["Index", "Class", "AP"]]
+            for i, c in enumerate(ap_class):
+                ap_table += [[c, class_names[c], "%.5f" % AP[i]]]
+            print(AsciiTable(ap_table).table)
+        print(f"---- mAP {AP.mean():.5f} ----")
     else:
-        for test_file in files[0:samples_number]:
-            frame = cv2.imread(frame_dir+test_file)
-            frame = cv2.resize(frame,(416,416),interpolation = cv2.INTER_AREA)
-            test_frames.append(frame)
-
-    print("Load total number of video frames: ", len(test_frames))
-    return test_frames
-
+        print("---- mAP not measured (no detections found by model) ----")
 ################################### Main function ###################################
 
 if __name__ == "__main__":
@@ -97,52 +75,98 @@ if __name__ == "__main__":
     model.set_split_layer(7) # layer <7
     model = model.eval()
     
-    # Load videos
-    test_frames = load_video_frames(frame_path, N_frame)
-    frame_labels = load_ground_truth(label_path)
-
+    dataloader = create_data_loader(testdata_path)
+    Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+    class_names = load_classes(class_name_path)  # List of class names
+    for j in range(1):
+        for i in range(1):
             
-    frame_predicts = []
-    time_start = torch.cuda.Event(enable_timing=True)
-    time_end = torch.cuda.Event(enable_timing=True)
-    ################## Init measurement lists ##########################
-    transfer_data_size =[]
+            frame_predicts = []
+            # thresh = 0.02*(j+1)
+            # quality =60+10*i
 
-    head_time =[]
-    tail_time =[]
-    encode_time=[]
-    decode_time=[]
-    request_time=[]
-    framework_time=[]
-    jpeg_time = []
-    #####################################################################
-    for index in range(len(test_frames)):
-        frame = test_frames[index]
+            time_start = torch.cuda.Event(enable_timing=True)
+            time_end = torch.cuda.Event(enable_timing=True)
+            ################## Init measurement lists ##########################
+            transfer_data_size =[]
 
-        with torch.no_grad():
-            ##### Head Model #####
-            time_start.record()
-            frame_tensor = convert_rgb_frame_to_tensor(frame)
-            head_tensor = model(frame_tensor, 1)
-            inference_result = model(head_tensor,2)
-            detection = non_max_suppression(inference_result, 0.5, 0.5)
-            time_end.record()
-            torch.cuda.synchronize()
-            head_time.append(time_start.elapsed_time(time_end))
-            ##### Head Model #####
-    
-            print(detection)
-            if len(detection[0])!= 0:
-                pred = dict(boxes=tensor(detection[0].numpy()[:,0:4]),
-                        scores=tensor(detection[0].numpy()[:,4]),
-                        labels=tensor(detection[0].numpy()[:,5],dtype=torch.int32), )
-            else:
-                pred = dict(boxes=tensor([]),
-                        scores=tensor([]),
-                        labels=tensor([],dtype=torch.int32),)
-            frame_predicts.append(pred)
-    metric = MeanAveragePrecision(iou_type="bbox") 
-    metric.update(frame_predicts, frame_labels[0:N_frame])
-    maps = metric.compute()
-    print(maps)
+            head_time =[]
+            tail_time =[]
+            encode_time=[]
+            decode_time=[]
+            request_time=[]
+            framework_time=[]
+            jpeg_time = []
+
+
+            labels = []
+            sample_metrics = []  # List of tuples (TP, confs, pred)
+            frame_index = 0
+            for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
+                frame_index+=1
+                
+                # Real measurements
+                # Extract labels
+                labels += targets[:, 1].tolist()
+                # Rescale target
+                targets[:, 2:] = xywh2xyxy(targets[:, 2:])
+                targets[:, 2:] *= 416
+
+                with torch.no_grad():
+                    ##### Head Model #####
+
+                    head_tensor = model(imgs.cuda(), 1)
+                    inference_result = model(head_tensor,2)
+                    detection = non_max_suppression(inference_result, 0.2, 0.5)
+                  
+                # print(detection)
+                sample_metrics += get_batch_statistics(detection, targets, iou_threshold=0.1)
         
+        # Concatenate sample statistics
+        true_positives, pred_scores, pred_labels = [
+            np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+        metrics_output = ap_per_class(
+            true_positives, pred_scores, pred_labels, labels)
+
+        print_eval_stats(metrics_output, class_names, True)
+
+
+
+
+            # with open(map_output_path,'a') as f:
+            #     f.write(str(thresh)+","
+            #             +str(quality)+","
+            #             +str(np.array(transfer_data_size).mean())+","
+            #             +str(np.array(transfer_data_size).std())+","
+            #             +str(maps["map"].item())+","
+            #             +str(maps["map_50"].item())+","
+            #             +str(maps["map_75"].item())+","
+            #             +str(maps["map_small"].item())+","
+            #             +str(maps["map_medium"].item())+","
+            #             +str(maps["map_large"].item())+","
+            #             +str(maps["mar_1"].item())+","
+            #             +str(maps["mar_100"].item())+","
+            #             +str(maps["mar_small"].item())+","
+            #             +str(maps["mar_medium"].item())+","
+            #             +str(maps["mar_large"].item())+"\n"
+            #             )
+                
+            # with open(time_output_path,'a') as f:
+            #     f.write(str(thresh)+","
+            #             +str(quality)+","
+            #             +str(np.array(head_time).mean())+","
+            #             +str(np.array(head_time).std())+","
+            #             +str(np.array(tail_time).mean())+","
+            #             +str(np.array(tail_time).std())+","
+            #             +str(np.array(framework_time).mean())+","
+            #             +str(np.array(framework_time).std())+","
+            #             +str(np.array(jpeg_time).mean())+","
+            #             +str(np.array(jpeg_time).std())+","
+            #             +str(np.array(encode_time).mean())+","
+            #             +str(np.array(encode_time).std())+","
+            #             +str(np.array(decode_time).mean())+","
+            #             +str(np.array(decode_time).std())+","
+            #             +str(np.array(request_time).mean())+","
+            #             +str(np.array(request_time).std())+"\n"
+            #     )
+                
