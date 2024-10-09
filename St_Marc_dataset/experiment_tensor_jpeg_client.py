@@ -26,9 +26,9 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-testdata_path = "./data/test_0.txt"
+testdata_path = "./data/test_5_fps_cleaned.txt"
 class_name_path = "./data/coco.names"
-log_dir = "./measurements/30_fps/"
+log_dir = "./measurements/5_fps/"
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
@@ -133,7 +133,6 @@ def print_eval_stats(metrics_output, class_names, verbose):
 if __name__ == "__main__":
     # Load Model
     model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","./ckpt/yolov3_ckpt_300.pth")
-    # model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -240,14 +239,13 @@ if __name__ == "__main__":
                 true_positives, pred_scores, pred_labels, labels)
 
             precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
-            print(AP.mean())
             ## Save data
             with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
                         +str(quality)+","
                         +str(np.array(transfer_data_size).mean())+","
                         +str(np.array(transfer_data_size).std())+","
-                        +str(AP.mean())+"\n"
+                        +str((AP[0]+AP[1])/2)+"\n"
                         )
                 
             with open(time_output_path,'a') as f:
