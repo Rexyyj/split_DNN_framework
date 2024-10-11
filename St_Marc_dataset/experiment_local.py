@@ -26,9 +26,9 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-testdata_path = "./data/test_30_fps_cleaned.txt"
+testdata_path = "./data/test_5_fps_cleaned.txt"
 class_name_path = "./data/coco.names"
-log_dir = "./measurements/30_fps_local/"
+log_dir = "./measurements/5_fps_local/"
 N_warmup = 0
 
 test_case = "tensor"

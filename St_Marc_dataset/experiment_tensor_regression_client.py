@@ -26,11 +26,19 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-testdata_path = "./data/test_5_fps_cleaned.txt"
-class_name_path = "./data/coco.names"
-log_dir = "./measurements/regression/5_fps/"
+
 N_warmup = 0
 split_layer= int(sys.argv[1])
+test_fps = int(sys.argv[2])
+
+testdata_path = "./data/test_"+str(test_fps)+"_fps_cleaned.txt"
+class_name_path = "./data/coco.names"
+log_dir = "./measurements/regression/"+str(test_fps)+"_fps/"
+
+# testdata_path = "./data/test_5_fps_cleaned.txt"
+# class_name_path = "./data/coco.names"
+# log_dir = "./measurements/jpeg/5_fps/"
+
 
 test_case = "tensor"
 service_uri = "http://10.0.1.34:8090/tensor"
@@ -212,7 +220,10 @@ if __name__ == "__main__":
 
                     ##### Framework Encoding #####
                     time_start.record()
-                    framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(frame_index, head_tensor)
+                    try:
+                        framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(frame_index, head_tensor)
+                    except:
+                        continue
                     time_end.record()
                     torch.cuda.synchronize()
                     encode_time.append(time_start.elapsed_time(time_end))
