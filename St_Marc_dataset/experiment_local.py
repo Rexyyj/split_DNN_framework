@@ -26,9 +26,9 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-testdata_path = "./data/test_0.txt"
+testdata_path = "./data/test_30_fps_cleaned.txt"
 class_name_path = "./data/coco.names"
-log_dir = "./measurements/30_fps/"
+log_dir = "./measurements/30_fps_local/"
 N_warmup = 0
 
 test_case = "tensor"
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
                     head_tensor = model(imgs.cuda(), 1)
                     inference_result = model(head_tensor,2)
-                    detection = non_max_suppression(inference_result, 0.2, 0.5)
+                    detection = non_max_suppression(inference_result, 0.01, 0.5)
                   
                 # print(detection)
                 sample_metrics += get_batch_statistics(detection, targets, iou_threshold=0.1)
