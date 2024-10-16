@@ -55,6 +55,7 @@ class SplitFramework():
         self.quality =  quality
     
     def compressor(self,tensor):
+        tensor = tensor.cpu()
         factors= []
         x_pos = []
         x_neg = []
@@ -91,7 +92,7 @@ class SplitFramework():
                 recon[x_pos[i]] = y_pred
                 recon[x_raw[x_neg[i]]] = -recon[x_raw[x_neg[i]]]
                 reconstructed_tensor[i] = torch.from_numpy(recon.reshape((tensor_shape[1],tensor_shape[2])))
-        return reconstructed_tensor.reshape(self.tensor_shape)
+        return reconstructed_tensor.reshape(self.tensor_shape).cuda()
 
     def split_framework_encode(self, head_tensor):
         if __COLLECT_FRAMEWORK_TIME__:
@@ -126,7 +127,7 @@ class SplitFramework():
             self._compression_time = self.time_start.elapsed_time(self.time_end)
             self.time_start.record()
             payload = {
-                "factor": factors,
+                "factors": factors,
                 "x_pos":x_pos,
                 "x_neg": x_neg,
                 "tensor_shape":head_tensor[0].shape
@@ -140,7 +141,7 @@ class SplitFramework():
             factors, x_pos, x_neg,compressed_size,reconstructed_tensor = self.compressor(pruned_tensor[0])
             self._datasize =compressed_size
             payload = {
-                "factor": factors,
+                "factors": factors,
                 "x_pos":x_pos,
                 "x_neg": x_neg,
                 "tensor_shape":head_tensor[0].shape
@@ -186,9 +187,7 @@ class SplitFramework():
                 self.time_end.record()
                 torch.cuda.synchronize()
                 self._model_head_time = self.time_start.elapsed_time(self.time_end)
-                framework_t,compress_t,data_to_trans = self.split_framework_encode(head_tensor)
-                self._framework_head_time = framework_t
-                self._compression_time = compress_t
+                data_to_trans = self.split_framework_encode(head_tensor)
                 # self._datasize = len(data_to_trans) ## Measure datasize
                 self.time_start.record()
                 r = requests.post(url=service_uri, data=data_to_trans)
@@ -198,7 +197,7 @@ class SplitFramework():
                 self._framework_response_time = self.time_start.elapsed_time(self.time_end)
             else:
                 head_tensor = self.model(frame_tensor, 1)
-                framework_t,compress_t,data_to_trans = self.split_framework_encode(head_tensor)
+                data_to_trans = self.split_framework_encode(head_tensor)
                 # self._datasize = len(data_to_trans) ## Measure datasize
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)

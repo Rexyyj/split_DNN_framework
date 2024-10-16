@@ -161,7 +161,7 @@ class SplitFramework():
         return reconstructed_head_tensor
     
     def split_framework_client(self, frame_tensor, service_uri):
-        with torch.no_gard():
+        with torch.no_grad():
             if __COLLECT_OVERALL_TIME__:
                 overall_start = torch.cuda.Event(enable_timing=True)
                 overall_end = torch.cuda.Event(enable_timing=True)
@@ -202,7 +202,7 @@ class SplitFramework():
             return response["detection"]
 
     def split_framework_service(self, compressed_data):
-        with torch.no_gard():
+        with torch.no_grad():
             if __COLLECT_FRAMEWORK_TIME__:
                 self.time_start.record()
                 reconstructed_head_tensor = self.split_framework_decode(compressed_data)
