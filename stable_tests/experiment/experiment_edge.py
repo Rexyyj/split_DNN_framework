@@ -51,8 +51,8 @@ class TailModelService:
     @cherrypy.tools.accept(media='text/plain')
     def __init__(self, split_layer,dummy_tensor) -> None:
         self.model = models_split_tiny.load_model(
-            "../pytorchyolo/config/yolov3-tiny.cfg",
-            "./ckpt/yolov3_ckpt_300.pth")
+            "../../pytorchyolo/config/yolov3-tiny.cfg",
+            "../ckpt/yolov3_ckpt_300.pth")
         # self.model = models_split_tiny.load_model(
         #     "../pytorchyolo/config/yolov3-tiny.cfg",
         #     "../pytorchyolo/weights/yolov3-tiny.weights")

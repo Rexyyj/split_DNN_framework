@@ -2,7 +2,6 @@
 import sys
 sys.path.append('../../')
 ################################### import libs ###################################
-import cv2
 from  pytorchyolo import  models_split_tiny
 import numpy as np
 import pandas as pd
