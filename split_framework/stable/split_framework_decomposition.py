@@ -63,10 +63,13 @@ class SplitFramework():
             if torch.linalg.matrix_rank(tensor[i]).item() == 0:
                 factors.append(0)
             else:
-                ft = tl.decomposition.parafac(tensor[i], rank=self.quality)
-                factors.append(ft)
-                compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4
-                compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4
+                try:
+                    ft = tl.decomposition.parafac(tensor[i], rank=self.quality)
+                    factors.append(ft)
+                    compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4
+                    compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4
+                except:
+                    factors.append(0)
         reconstructed_tensor = self.decompressor(tensor.shape, factors)
         return factors, compressed_size, reconstructed_tensor 
 
@@ -76,7 +79,7 @@ class SplitFramework():
         reconstructed_tensor = torch.zeros(tensor_shape)
         for i in range(tensor_shape[0]):
             reconstructed_tensor[i] = tl.cp_to_tensor(factors[i])
-        return reconstructed_tensor.reshape(self.tensor_shape)
+        return reconstructed_tensor.reshape(self.tensor_shape).cuda()
 
     def split_framework_encode(self, head_tensor):
         if __COLLECT_FRAMEWORK_TIME__:
