@@ -170,9 +170,7 @@ class SplitFramework():
                 self.time_end.record()
                 torch.cuda.synchronize()
                 self._model_head_time = self.time_start.elapsed_time(self.time_end)
-                framework_t,compress_t,data_to_trans = self.split_framework_encode(head_tensor)
-                self._framework_head_time = framework_t
-                self._compression_time = compress_t
+                data_to_trans = self.split_framework_encode(head_tensor)
                 self._datasize = len(data_to_trans) ## Measure datasize
                 self.time_start.record()
                 r = requests.post(url=service_uri, data=data_to_trans)
@@ -182,7 +180,7 @@ class SplitFramework():
                 self._framework_response_time = self.time_start.elapsed_time(self.time_end)
             else:
                 head_tensor = self.model(frame_tensor, 1)
-                framework_t,compress_t,data_to_trans = self.split_framework_encode(head_tensor)
+                data_to_trans = self.split_framework_encode(head_tensor)
                 self._datasize = len(data_to_trans) ## Measure datasize
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)
