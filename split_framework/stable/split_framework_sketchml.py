@@ -61,8 +61,8 @@ class SplitFramework():
         self.pruning_threshold = threshold
     
     def set_quality(self, quality):
-        self.sketch_m =  quality[0]
-        self.sketch_q =  quality[1]
+        self.sketch_q =  quality[0]
+        self.sketch_m =  quality[1]
         self.sketch_d =  quality[2]
     
     def get_bucket_index(self,tensor, n_buckets):
