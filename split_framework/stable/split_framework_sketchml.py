@@ -242,7 +242,7 @@ class SplitFramework():
             if __COLLECT_OVERALL_TIME__:
                 overall_end.record()
                 torch.cuda.synchronize()
-                self._overall_time = overall_end.elapsed_time(overall_start)
+                self._overall_time = overall_start.elapsed_time(overall_end)
             
             self._framework_tail_time = response["fw_tail_time"]
             self._model_tail_time = response["model_tail_time"]

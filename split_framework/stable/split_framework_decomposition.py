@@ -7,12 +7,13 @@ import torch
 import tensorly as tl
 import pickle
 import requests
-from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
+from split_framework.stable.tools import *
+from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
 __COLLECT_TENSOR_CHARACTERISTIC__ = False
-__COLLECT_TENSOR_RECONSTRUCT__ = False
-__COLLECT_FRAMEWORK_TIME__ = False
-__COLLECT_OVERALL_TIME__ = False
+__COLLECT_TENSOR_RECONSTRUCT__ = True
+__COLLECT_FRAMEWORK_TIME__ = True
+__COLLECT_OVERALL_TIME__ = True
 ################################### class definition ###################################
 class SplitFramework():
 
@@ -26,27 +27,21 @@ class SplitFramework():
 
         # Measurements
         self._datasize=None
-        if __COLLECT_OVERALL_TIME__:
-            self._overall_time = None
-        if __COLLECT_FRAMEWORK_TIME__:
-            self.time_start = torch.cuda.Event(enable_timing=True)
-            self.time_end = torch.cuda.Event(enable_timing=True)
-            self._model_head_time = -1
-            self._model_tail_time = -1
-            self._compression_time = -1
-            self._decompression_time = -1
-            self._framework_head_time = -1
-            self._framework_tail_time = -1
-            self._framework_response_time = -1
-
-        if __COLLECT_TENSOR_CHARACTERISTIC__:
-            self._sparsity = -1
-            self._decomposability = -1
-            self._pictoriality =-1
-            self._regularity = -1
-
-        if __COLLECT_TENSOR_RECONSTRUCT__:
-            self._reconstruct_snr = -1
+        self._overall_time = -1
+        self.time_start = torch.cuda.Event(enable_timing=True)
+        self.time_end = torch.cuda.Event(enable_timing=True)
+        self._model_head_time = -1
+        self._model_tail_time = -1
+        self._compression_time = -1
+        self._decompression_time = -1
+        self._framework_head_time = -1
+        self._framework_tail_time = -1
+        self._framework_response_time = -1
+        self._sparsity = -1
+        self._decomposability = -1
+        self._pictoriality =-1
+        self._regularity = -1
+        self._reconstruct_snr = -1
         
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape
@@ -128,6 +123,7 @@ class SplitFramework():
             self._framework_head_time+=self.time_start.elapsed_time(self.time_end)
         else:
             factors, compressed_size, reconstructed_tensor = self.compressor(pruned_tensor[0])
+            self._datasize = compressed_size
             payload = {
                 "factors": factors,
                 "tensor_shape":pruned_tensor[0].shape
@@ -193,7 +189,7 @@ class SplitFramework():
             if __COLLECT_OVERALL_TIME__:
                 overall_end.record()
                 torch.cuda.synchronize()
-                self._overall_time = overall_end.elapsed_time(overall_start)
+                self._overall_time = overall_start.elapsed_time(overall_end)
             
             self._framework_tail_time = response["fw_tail_time"]
             self._model_tail_time = response["model_tail_time"]
