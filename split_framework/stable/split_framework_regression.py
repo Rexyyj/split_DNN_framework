@@ -9,7 +9,7 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -190,7 +190,6 @@ class SplitFramework():
                 torch.cuda.synchronize()
                 self._model_head_time = self.time_start.elapsed_time(self.time_end)
                 data_to_trans = self.split_framework_encode(head_tensor)
-                # self._datasize = len(data_to_trans) ## Measure datasize
                 self.time_start.record()
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)
@@ -200,7 +199,6 @@ class SplitFramework():
             else:
                 head_tensor = self.model(frame_tensor, 1)
                 data_to_trans = self.split_framework_encode(head_tensor)
-                # self._datasize = len(data_to_trans) ## Measure datasize
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)
 
