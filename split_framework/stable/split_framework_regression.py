@@ -9,10 +9,10 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
-__COLLECT_TENSOR_RECONSTRUCT__ = False
-__COLLECT_FRAMEWORK_TIME__ = False
-__COLLECT_OVERALL_TIME__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
+__COLLECT_TENSOR_RECONSTRUCT__ = True
+__COLLECT_FRAMEWORK_TIME__ = True
+__COLLECT_OVERALL_TIME__ = True
 ################################### class definition ###################################
 class SplitFramework():
 
@@ -26,7 +26,7 @@ class SplitFramework():
 
         # Measurements
         self._datasize=None
-        self._overall_time = None
+        self._overall_time = -1
         self.time_start = torch.cuda.Event(enable_timing=True)
         self.time_end = torch.cuda.Event(enable_timing=True)
         self._model_head_time = -1
