@@ -177,41 +177,59 @@ class SplitFramework():
         return reconstructed_head_tensor
     
     def split_framework_client(self, frame_tensor, service_uri):
-        with torch.no_grad():
-            if __COLLECT_OVERALL_TIME__:
-                overall_start = torch.cuda.Event(enable_timing=True)
-                overall_end = torch.cuda.Event(enable_timing=True)
-                overall_start.record()
+        try:
+            with torch.no_grad():
+                if __COLLECT_OVERALL_TIME__:
+                    overall_start = torch.cuda.Event(enable_timing=True)
+                    overall_end = torch.cuda.Event(enable_timing=True)
+                    overall_start.record()
 
-            if __COLLECT_FRAMEWORK_TIME__:
-                self.time_start.record()
-                head_tensor = self.model(frame_tensor, 1)
-                self.time_end.record()
-                torch.cuda.synchronize()
-                self._model_head_time = self.time_start.elapsed_time(self.time_end)
-                data_to_trans = self.split_framework_encode(head_tensor)
-                self.time_start.record()
-                r = requests.post(url=service_uri, data=data_to_trans)
-                response = pickle.loads(r.content)
-                self.time_end.record()
-                torch.cuda.synchronize()
-                self._framework_response_time = self.time_start.elapsed_time(self.time_end)
-            else:
-                head_tensor = self.model(frame_tensor, 1)
-                data_to_trans = self.split_framework_encode(head_tensor)
-                r = requests.post(url=service_uri, data=data_to_trans)
-                response = pickle.loads(r.content)
+                if __COLLECT_FRAMEWORK_TIME__:
+                    self.time_start.record()
+                    head_tensor = self.model(frame_tensor, 1)
+                    self.time_end.record()
+                    torch.cuda.synchronize()
+                    self._model_head_time = self.time_start.elapsed_time(self.time_end)
+                    data_to_trans = self.split_framework_encode(head_tensor)
+                    self.time_start.record()
+                    r = requests.post(url=service_uri, data=data_to_trans)
+                    response = pickle.loads(r.content)
+                    self.time_end.record()
+                    torch.cuda.synchronize()
+                    self._framework_response_time = self.time_start.elapsed_time(self.time_end)
+                else:
+                    head_tensor = self.model(frame_tensor, 1)
+                    data_to_trans = self.split_framework_encode(head_tensor)
+                    r = requests.post(url=service_uri, data=data_to_trans)
+                    response = pickle.loads(r.content)
 
-            if __COLLECT_OVERALL_TIME__:
-                overall_end.record()
-                torch.cuda.synchronize()
-                self._overall_time = overall_start.elapsed_time(overall_end)
-            
-            self._framework_tail_time = response["fw_tail_time"]
-            self._model_tail_time = response["model_tail_time"]
-            self._decompression_time = response["decmp_time"]
+                if __COLLECT_OVERALL_TIME__:
+                    overall_end.record()
+                    torch.cuda.synchronize()
+                    self._overall_time = overall_start.elapsed_time(overall_end)
+                
+                self._framework_tail_time = response["fw_tail_time"]
+                self._model_tail_time = response["model_tail_time"]
+                self._decompression_time = response["decmp_time"]
 
-            return response["detection"]
+                return response["detection"]
+        except:
+            self._datasize_est=-1
+            self._datasize_real=-1
+            self._overall_time = -1
+            self._model_head_time = -1
+            self._model_tail_time = -1
+            self._compression_time = -1
+            self._decompression_time = -1
+            self._framework_head_time = -1
+            self._framework_tail_time = -1
+            self._framework_response_time = -1
+            self._sparsity = -1
+            self._decomposability = -1
+            self._pictoriality =-1
+            self._regularity = -1
+            self._reconstruct_snr = -1
+            return []
 
     def split_framework_service(self, compressed_data):
         with torch.no_grad():

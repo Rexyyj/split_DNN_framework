@@ -226,7 +226,7 @@ if __name__ == "__main__":
                 raise Exception("Unknown compression techique!")
             # thresh = 0.0
             # quality =100
-            print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
+            print("Testing threshold: ",thresh,", Quality: ",quality)
             sf = SplitFramework(device="cuda", model=model)
             sf.set_reference_tensor(dummy_head_tensor)
             sf.set_pruning_threshold(thresh)
