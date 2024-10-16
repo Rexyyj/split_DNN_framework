@@ -140,7 +140,7 @@ class SplitFramework():
     def split_framework_decode(self,tensor_dict):
         if __COLLECT_FRAMEWORK_TIME__:
             self.time_start.record()
-            reconstructed_tensor = self.decompressor(tensor_dict["tensor_size"],tensor_dict["factors"])
+            reconstructed_tensor = self.decompressor(tensor_dict["tensor_shape"],tensor_dict["factors"])
             self.time_end.record()
             torch.cuda.synchronize()
             self._decompression_time = self.time_start.elapsed_time(self.time_end)
@@ -152,7 +152,7 @@ class SplitFramework():
             torch.cuda.synchronize()
             self._framework_tail_time = self.time_start.elapsed_time(self.time_end)
         else:
-            reconstructed_tensor =  self.decompressor(tensor_dict["tensor_size"],tensor_dict["factors"])
+            reconstructed_tensor =  self.decompressor(tensor_dict["tensor_shape"],tensor_dict["factors"])
             reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
             self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
