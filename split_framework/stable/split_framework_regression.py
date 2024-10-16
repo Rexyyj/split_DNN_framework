@@ -25,7 +25,8 @@ class SplitFramework():
         self.model = model
 
         # Measurements
-        self._datasize=None
+        self._datasize_est=None
+        self._datasize_real=None
         self._overall_time = -1
         self.time_start = torch.cuda.Event(enable_timing=True)
         self.time_end = torch.cuda.Event(enable_timing=True)
@@ -121,7 +122,6 @@ class SplitFramework():
         if __COLLECT_FRAMEWORK_TIME__:
             self.time_start.record()
             factors, x_pos, x_neg,compressed_size,reconstructed_tensor = self.compressor(pruned_tensor[0])
-            self._datasize = compressed_size
             self.time_end.record()
             torch.cuda.synchronize()
             self._compression_time = self.time_start.elapsed_time(self.time_end)
@@ -139,7 +139,6 @@ class SplitFramework():
             self._framework_head_time+=self.time_start.elapsed_time(self.time_end)
         else:
             factors, x_pos, x_neg,compressed_size,reconstructed_tensor = self.compressor(pruned_tensor[0])
-            self._datasize =compressed_size
             payload = {
                 "factors": factors,
                 "x_pos":x_pos,
@@ -152,7 +151,10 @@ class SplitFramework():
         if __COLLECT_TENSOR_RECONSTRUCT__:
             self._reconstruct_snr = calculate_snr(reconstructed_tensor.reshape(self.tensor_size).cpu().numpy() , head_tensor.reshape(self.tensor_size).cpu().numpy())
 
-        return pickle.dumps(payload)
+        request_payload = pickle.dumps(payload)
+        self._datasize_est = compressed_size
+        self._datasize_real = len(request_payload)
+        return request_payload
     
     def split_framework_decode(self,tensor_dict):
         if __COLLECT_FRAMEWORK_TIME__:
@@ -272,6 +274,6 @@ class SplitFramework():
         return self._reconstruct_snr
     
     def get_data_size(self):
-        return self._datasize
+        return self._datasize_est, self._datasize_real
 
 

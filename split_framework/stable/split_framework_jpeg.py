@@ -26,7 +26,8 @@ class SplitFramework():
         self.model = model
 
         # Measurements
-        self._datasize=None
+        self._datasize_est=None
+        self._datasize_real=None
         self._overall_time = -1
         self.time_start = torch.cuda.Event(enable_timing=True)
         self.time_end = torch.cuda.Event(enable_timing=True)
@@ -140,7 +141,11 @@ class SplitFramework():
         if __COLLECT_TENSOR_RECONSTRUCT__:
             self._reconstruct_snr = calculate_snr(reconstructed_tensor.reshape(self.tensor_size).cpu().numpy() , head_tensor.reshape(self.tensor_size).cpu().numpy())
 
-        return pickle.dumps(payload)
+        request_payload = pickle.dumps(payload)
+        self._datasize_est = len(encoded_data)
+        self._datasize_real = len(request_payload)
+
+        return request_payload
     
     def split_framework_decode(self,tensor_dict):
         if __COLLECT_FRAMEWORK_TIME__:
@@ -176,7 +181,6 @@ class SplitFramework():
                 torch.cuda.synchronize()
                 self._model_head_time = self.time_start.elapsed_time(self.time_end)
                 data_to_trans = self.split_framework_encode(head_tensor)
-                self._datasize = len(data_to_trans) ## Measure datasize
                 self.time_start.record()
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)
@@ -186,7 +190,6 @@ class SplitFramework():
             else:
                 head_tensor = self.model(frame_tensor, 1)
                 data_to_trans = self.split_framework_encode(head_tensor)
-                self._datasize = len(data_to_trans) ## Measure datasize
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)
 
@@ -260,6 +263,6 @@ class SplitFramework():
         return self._reconstruct_snr
     
     def get_data_size(self):
-        return self._datasize
+        return self._datasize_est, self._datasize_real
 
 

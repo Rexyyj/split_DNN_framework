@@ -102,7 +102,8 @@ with open(characteristic_output_path,'a') as f:
             "decomposability,"
             "regularity,"
             "pictoriality,"
-            "datasize,"
+            "datasize_est,"
+            "datasize_real,"
             "reconstruct_snr\n")
     f.write(title)
 
@@ -139,6 +140,9 @@ def write_time_data(sf, thresh,quality,frame_id):
     fw_head_time,fw_tail_time,fw_response_time = sf.get_framework_time_measurement()
     compression_time, decompression_time = sf.get_compression_time_measurement()
     overall_time = sf.get_overall_time_measurement()
+    
+    if __COMPRESSION_TECHNIQUE__ =="sketchml":
+        quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
 
     with open(time_output_path,'a') as f:
         f.write(str(thresh)+","
@@ -156,7 +160,7 @@ def write_time_data(sf, thresh,quality,frame_id):
         
 def write_characteristic(sf, thresh,quality,frame_id):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
-    data_size = sf.get_data_size()
+    datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
 
     with open(characteristic_output_path,'a') as f:
@@ -167,7 +171,8 @@ def write_characteristic(sf, thresh,quality,frame_id):
                 +str(decomposability)+","
                 +str(regularity)+","
                 +str(pictoriality)+","
-                +str(data_size)+","
+                +str(datasize_est)+","
+                +str(datasize_real)+","
                 +str(reconstruct_snr)+"\n"
                 )
 ################################### Main function ###################################
