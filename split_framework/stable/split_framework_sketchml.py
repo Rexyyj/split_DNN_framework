@@ -137,7 +137,6 @@ class SplitFramework():
             self.time_start.record()
             # Framework Head #
             diff_tensor = head_tensor-self.reference_tensor
-            self.diff_tensor_sparsity.append(torch.sum(diff_tensor==0).cpu().item()/self.tensor_size)
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
@@ -147,7 +146,6 @@ class SplitFramework():
         else:
             # Framework Head #
             diff_tensor = head_tensor-self.reference_tensor
-            self.diff_tensor_sparsity.append(torch.sum(diff_tensor==0).cpu().item()/self.tensor_size)
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
