@@ -3,19 +3,11 @@ import sys
 sys.path.append('../../')
 
 import cherrypy
-import json
 
-from  pytorchyolo import detect, models_split_tiny
-from pytorchyolo.utils.transforms import Resize, DEFAULT_TRANSFORMS
-import torchvision.transforms as transforms
-import numpy as np
-from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
-import pandas as pd
-import time
+from  pytorchyolo import models_split_tiny
 import torch
 import pickle
-from split_framework.stable.split_framework_jpeg import SplitFramework
-from torch.profiler import profile, record_function, ProfilerActivity
+from split_framework.stable.split_framework_regression import SplitFramework
 
 def get_dummy_tensor(split_layer):
     if split_layer==8:
@@ -53,9 +45,6 @@ class TailModelService:
         self.model = models_split_tiny.load_model(
             "../../pytorchyolo/config/yolov3-tiny.cfg",
             "../ckpt/yolov3_ckpt_300.pth")
-        # self.model = models_split_tiny.load_model(
-        #     "../pytorchyolo/config/yolov3-tiny.cfg",
-        #     "../pytorchyolo/weights/yolov3-tiny.weights")
         self.model.set_split_layer(split_layer) 
         self.model = self.model.eval()
         self.dummy_tensor = dummy_tensor

@@ -4,10 +4,10 @@ sys.path.append('./')
 ################################### import libs ###################################
 import numpy as np
 import torch
-
 import pickle
 import requests
-from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
+from split_framework.stable.tools import *
+from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
 __COLLECT_TENSOR_CHARACTERISTIC__ = False
 __COLLECT_TENSOR_RECONSTRUCT__ = False
@@ -26,27 +26,21 @@ class SplitFramework():
 
         # Measurements
         self._datasize=None
-        if __COLLECT_OVERALL_TIME__:
-            self._overall_time = None
-        if __COLLECT_FRAMEWORK_TIME__:
-            self.time_start = torch.cuda.Event(enable_timing=True)
-            self.time_end = torch.cuda.Event(enable_timing=True)
-            self._model_head_time = -1
-            self._model_tail_time = -1
-            self._compression_time = -1
-            self._decompression_time = -1
-            self._framework_head_time = -1
-            self._framework_tail_time = -1
-            self._framework_response_time = -1
-
-        if __COLLECT_TENSOR_CHARACTERISTIC__:
-            self._sparsity = -1
-            self._decomposability = -1
-            self._pictoriality =-1
-            self._regularity = -1
-
-        if __COLLECT_TENSOR_RECONSTRUCT__:
-            self._reconstruct_snr = -1
+        self._overall_time = None
+        self.time_start = torch.cuda.Event(enable_timing=True)
+        self.time_end = torch.cuda.Event(enable_timing=True)
+        self._model_head_time = -1
+        self._model_tail_time = -1
+        self._compression_time = -1
+        self._decompression_time = -1
+        self._framework_head_time = -1
+        self._framework_tail_time = -1
+        self._framework_response_time = -1
+        self._sparsity = -1
+        self._decomposability = -1
+        self._pictoriality =-1
+        self._regularity = -1
+        self._reconstruct_snr = -1
         
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape
@@ -80,7 +74,7 @@ class SplitFramework():
                 factors.append(m)
                 x_pos.append(mask)
                 x_neg.append(t<0)
-                compressed_size +=  tensor.shape[1]*tensor.shape[2]/4 + polynominal*4
+                compressed_size +=  tensor.shape[1]*tensor.shape[2]/4 + self.quality*4
         reconstructed_tensor = self.decompressor(tensor.shape,factors, x_pos, x_neg)
         return factors, x_pos, x_neg, compressed_size,reconstructed_tensor
 
@@ -104,7 +98,6 @@ class SplitFramework():
             self.time_start.record()
             # Framework Head #
             diff_tensor = head_tensor-self.reference_tensor
-            self.diff_tensor_sparsity.append(torch.sum(diff_tensor==0).cpu().item()/self.tensor_size)
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
@@ -114,7 +107,6 @@ class SplitFramework():
         else:
             # Framework Head #
             diff_tensor = head_tensor-self.reference_tensor
-            self.diff_tensor_sparsity.append(torch.sum(diff_tensor==0).cpu().item()/self.tensor_size)
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
@@ -182,7 +174,7 @@ class SplitFramework():
         return reconstructed_head_tensor
     
     def split_framework_client(self, frame_tensor, service_uri):
-        with torch.no_gard():
+        with torch.no_grad():
             if __COLLECT_OVERALL_TIME__:
                 overall_start = torch.cuda.Event(enable_timing=True)
                 overall_end = torch.cuda.Event(enable_timing=True)
@@ -223,7 +215,7 @@ class SplitFramework():
             return response["detection"]
 
     def split_framework_service(self, compressed_data):
-        with torch.no_gard():
+        with torch.no_grad():
             if __COLLECT_FRAMEWORK_TIME__:
                 self.time_start.record()
                 reconstructed_head_tensor = self.split_framework_decode(compressed_data)

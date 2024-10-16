@@ -4,12 +4,10 @@ sys.path.append('../../')
 ################################### import libs ###################################
 from  pytorchyolo import  models_split_tiny
 import numpy as np
-import pandas as pd
 import time
 import torch
 import os
-from torch import tensor
-from split_framework.stable.split_framework_jpeg import SplitFramework
+from split_framework.stable.split_framework_regression import SplitFramework
 
 import tqdm
 import numpy as np
@@ -18,11 +16,12 @@ import torch
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from terminaltables import AsciiTable
-from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, non_max_suppression, to_cpu, xywh2xyxy, print_environment_info
+from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, xywh2xyxy
 from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
+__COMPRESSION_TECHNIQUE__ = "regression"
 
 N_warmup = 0
 split_layer= int(sys.argv[1])
@@ -32,14 +31,9 @@ testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-# testdata_path = "./data/test_5_fps_cleaned.txt"
-# class_name_path = "./data/coco.names"
-# log_dir = "./measurements/jpeg/5_fps/"
-
 test_case = "jpeg"
 service_uri = "http://10.0.1.34:8090/tensor"
 reset_uri = "http://10.0.1.34:8090/reset"
-
 
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
@@ -202,7 +196,13 @@ if __name__ == "__main__":
             
             frame_predicts = []
             thresh = 0.02*(j+1)
-            quality =60+10*i
+            
+            if __COMPRESSION_TECHNIQUE__ == "jpeg":
+                quality =60+10*i
+            elif __COMPRESSION_TECHNIQUE__ == "regression":
+                quality = i+1
+            else:
+                raise Exception("Unknown compression techique!")
             # thresh = 0.0
             # quality =100
             print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
