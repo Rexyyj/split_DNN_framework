@@ -1,12 +1,13 @@
 ################################### setting path ###################################
-import sys
-sys.path.append('./')
+# import sys
+# sys.path.append('./')
 ################################### import libs ###################################
 import numpy as np
 import torch
 import simplejpeg
 import pickle
 import requests
+from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
 ################################### Define version ###################################
 __COLLECT_TENSOR_CHARACTERISTIC__ = False
@@ -98,7 +99,6 @@ class SplitFramework():
         else:
             # Framework Head #
             diff_tensor = head_tensor-self.reference_tensor
-            self.diff_tensor_sparsity.append(torch.sum(diff_tensor==0).cpu().item()/self.tensor_size)
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
@@ -164,7 +164,7 @@ class SplitFramework():
         return reconstructed_head_tensor
     
     def split_framework_client(self, frame_tensor, service_uri):
-        with torch.no_gard():
+        with torch.no_grad():
             if __COLLECT_OVERALL_TIME__:
                 overall_start = torch.cuda.Event(enable_timing=True)
                 overall_end = torch.cuda.Event(enable_timing=True)
@@ -176,9 +176,7 @@ class SplitFramework():
                 self.time_end.record()
                 torch.cuda.synchronize()
                 self._model_head_time = self.time_start.elapsed_time(self.time_end)
-                framework_t,compress_t,data_to_trans = self.split_framework_encode(head_tensor)
-                self._framework_head_time = framework_t
-                self._compression_time = compress_t
+                data_to_trans = self.split_framework_encode(head_tensor)
                 self._datasize = len(data_to_trans) ## Measure datasize
                 self.time_start.record()
                 r = requests.post(url=service_uri, data=data_to_trans)
@@ -188,7 +186,7 @@ class SplitFramework():
                 self._framework_response_time = self.time_start.elapsed_time(self.time_end)
             else:
                 head_tensor = self.model(frame_tensor, 1)
-                framework_t,compress_t,data_to_trans = self.split_framework_encode(head_tensor)
+                data_to_trans = self.split_framework_encode(head_tensor)
                 self._datasize = len(data_to_trans) ## Measure datasize
                 r = requests.post(url=service_uri, data=data_to_trans)
                 response = pickle.loads(r.content)
@@ -205,7 +203,7 @@ class SplitFramework():
             return response["detection"]
 
     def split_framework_service(self, compressed_data):
-        with torch.no_gard():
+        with torch.no_grad():
             if __COLLECT_FRAMEWORK_TIME__:
                 self.time_start.record()
                 reconstructed_head_tensor = self.split_framework_decode(compressed_data)

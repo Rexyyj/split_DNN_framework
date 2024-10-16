@@ -27,7 +27,8 @@ from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
-testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
+# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
+testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
@@ -74,8 +75,8 @@ elif split_layer==1:
 try:
     os.mkdir(log_dir)
 except:
-    os.system("rm -rf "+log_dir)
-    os.mkdir(log_dir)
+    os.system("rm -rf "+measurement_path)
+    os.system("mkdir -p "+measurement_path)
         
 
 with open(map_output_path,'a') as f:
@@ -99,7 +100,7 @@ with open(time_output_path,'a') as f:
             )
     f.write(title)
 
-with open(characteristic_output_path) as f:
+with open(characteristic_output_path,'a') as f:
     title = ("pruning_thresh,"
             "quality,"
             "frame_id,"
@@ -179,7 +180,7 @@ def write_characteristic(sf, thresh,quality,frame_id):
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","./ckpt/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -219,7 +220,7 @@ if __name__ == "__main__":
                 imgs = Variable(imgs.type(Tensor), requires_grad=False)
                 if frame_index <= N_warmup:
                     with torch.no_grad():
-                        detection=sf.split_framework_client(imgs)
+                        detection=sf.split_framework_client(imgs,service_uri=service_uri)
                         continue
                 
                 # Real measurements
@@ -229,7 +230,7 @@ if __name__ == "__main__":
                 targets[:, 2:] = xywh2xyxy(targets[:, 2:])
                 targets[:, 2:] *= 416
                 
-                detection = sf.split_framework_client(imgs)
+                detection = sf.split_framework_client(imgs,service_uri=service_uri)
                 write_time_data(sf,thresh,quality,frame_index)
                 write_characteristic(sf,thresh,quality,frame_index)
                 sample_metrics += get_batch_statistics(detection, targets, iou_threshold=0.1)

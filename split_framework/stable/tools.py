@@ -4,10 +4,11 @@ import torch
 import simplejpeg
 import pickle
 
-import tensorly as tl
-import torch_dct as dct
+
 
 ####################### tool functions ##############################
+import tensorly as tl
+import torch_dct as dct
 def raise_error_when_not_numpy(value):
     if isinstance(value,np.ndarray) == False:
         raise Exception("Input not numpy array!")
