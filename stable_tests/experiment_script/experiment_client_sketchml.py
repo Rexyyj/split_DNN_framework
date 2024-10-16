@@ -25,14 +25,14 @@ __COMPRESSION_TECHNIQUE__ = "sketchml"
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
-# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
-testdata_path = "../../St_Marc_dataset/data/test_0.txt"
+testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
+# testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
 test_case = "sketchml"
-service_uri = "http://10.0.1.34:8092/tensor"
-reset_uri = "http://10.0.1.34:8092/reset"
+service_uri = "http://10.0.1.34:8094/tensor"
+reset_uri = "http://10.0.1.34:8094/reset"
 
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"

@@ -31,8 +31,8 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
 test_case = "jpeg"
-service_uri = "http://10.0.1.34:8093/tensor"
-reset_uri = "http://10.0.1.34:8093/reset"
+service_uri = "http://10.0.1.34:8092/tensor"
+reset_uri = "http://10.0.1.34:8092/reset"
 
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"

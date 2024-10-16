@@ -31,8 +31,8 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
 test_case = "regression"
-service_uri = "http://10.0.1.34:8094/tensor"
-reset_uri = "http://10.0.1.34:8094/reset"
+service_uri = "http://10.0.1.34:8093/tensor"
+reset_uri = "http://10.0.1.34:8093/reset"
 
 measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"

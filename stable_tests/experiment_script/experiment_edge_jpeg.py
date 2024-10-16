@@ -100,7 +100,7 @@ if __name__ == "__main__":
     # set this address to host ip address to enable dockers to use REST api
     cherrypy.server.socket_host = "10.0.1.34"
     cherrypy.config.update(
-        {'server.socket_port':8093 })
+        {'server.socket_port':8092 })
 
     # Blocking the terminal and show output, for debug
     cherrypy.tree.mount(tail_service, "/",conf)
