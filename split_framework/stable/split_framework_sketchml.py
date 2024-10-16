@@ -13,15 +13,15 @@ import datasketches as dsk
 from numba import jit
 import math
 import torch
-
+from split_framework.stable.tools import *
 import pickle
 import requests
-from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
+from pytorchyolo.utils.utils import  non_max_suppression
 ################################### Define version ###################################
 __COLLECT_TENSOR_CHARACTERISTIC__ = False
-__COLLECT_TENSOR_RECONSTRUCT__ = False
-__COLLECT_FRAMEWORK_TIME__ = False
-__COLLECT_OVERALL_TIME__ = False
+__COLLECT_TENSOR_RECONSTRUCT__ = True
+__COLLECT_FRAMEWORK_TIME__ = True
+__COLLECT_OVERALL_TIME__ = True
 ################################### class definition ###################################
 class SplitFramework():
 
@@ -35,27 +35,21 @@ class SplitFramework():
 
         # Measurements
         self._datasize=None
-        if __COLLECT_OVERALL_TIME__:
-            self._overall_time = None
-        if __COLLECT_FRAMEWORK_TIME__:
-            self.time_start = torch.cuda.Event(enable_timing=True)
-            self.time_end = torch.cuda.Event(enable_timing=True)
-            self._model_head_time = -1
-            self._model_tail_time = -1
-            self._compression_time = -1
-            self._decompression_time = -1
-            self._framework_head_time = -1
-            self._framework_tail_time = -1
-            self._framework_response_time = -1
-
-        if __COLLECT_TENSOR_CHARACTERISTIC__:
-            self._sparsity = -1
-            self._decomposability = -1
-            self._pictoriality =-1
-            self._regularity = -1
-
-        if __COLLECT_TENSOR_RECONSTRUCT__:
-            self._reconstruct_snr = -1
+        self._overall_time = -1
+        self.time_start = torch.cuda.Event(enable_timing=True)
+        self.time_end = torch.cuda.Event(enable_timing=True)
+        self._model_head_time = -1
+        self._model_tail_time = -1
+        self._compression_time = -1
+        self._decompression_time = -1
+        self._framework_head_time = -1
+        self._framework_tail_time = -1
+        self._framework_response_time = -1
+        self._sparsity = -1
+        self._decomposability = -1
+        self._pictoriality =-1
+        self._regularity = -1
+        self._reconstruct_snr = -1
         
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape
@@ -66,10 +60,10 @@ class SplitFramework():
     def set_pruning_threshold(self, threshold):
         self.pruning_threshold = threshold
     
-    def set_quality(self, quality_m, quality_q, quality_d):
-        self.sketch_m =  quality_m
-        self.sketch_q =  quality_q
-        self.sketch_d =  quality_d
+    def set_quality(self, quality):
+        self.sketch_m =  quality[0]
+        self.sketch_q =  quality[1]
+        self.sketch_d =  quality[2]
     
     def get_bucket_index(self,tensor, n_buckets):
         tensor = tensor.reshape(tensor.shape[0]* tensor.shape[1]* tensor.shape[2])
@@ -118,19 +112,18 @@ class SplitFramework():
 
         compressed_size = 0
         for i in range(len(minmaxsketch.tables)):
-            compressed_size+=len(encoder.encode(minmaxsketch.tables[i].tolist()))+len(bucket_means)*4
-        
+            compressed_size+=len(encoder.encode(minmaxsketch.tables[i].tolist()))
+        compressed_size = compressed_size+len(bucket_means)*4+len(keys)
         reconstructed_tensor = self.decompressor(tensor.shape,minmaxsketch,bucket_means, keys)
         return minmaxsketch, bucket_means,keys, compressed_size, reconstructed_tensor
 
     def decompressor(self, tensor_shape,minmaxsketch,bucket_means, keys):
         reconstructed_bucket_index =  minmaxsketch.query_array(keys)
-
         # Tensor reconstruction
         reconstructed_tensor = np.zeros(tensor_shape[0]*tensor_shape[1]*tensor_shape[2], dtype=np.float32)
         reconstructed_tensor[keys] = bucket_means[reconstructed_bucket_index]
         reconstructed_tensor = torch.from_numpy(reconstructed_tensor).reshape(tensor_shape)
-        return reconstructed_tensor.reshape(self.tensor_shape)
+        return reconstructed_tensor.reshape(self.tensor_shape).cuda()
 
     def split_framework_encode(self, head_tensor):
         if __COLLECT_FRAMEWORK_TIME__:
@@ -158,14 +151,16 @@ class SplitFramework():
 
         if __COLLECT_FRAMEWORK_TIME__:
             self.time_start.record()
-            factors, compressed_size, reconstructed_tensor = self.compressor(pruned_tensor[0])
+            minmaxsketch, bucket_means,keys, compressed_size, reconstructed_tensor = self.compressor(pruned_tensor[0])
             self._datasize = compressed_size
             self.time_end.record()
             torch.cuda.synchronize()
             self._compression_time = self.time_start.elapsed_time(self.time_end)
             self.time_start.record()
             payload = {
-                "factors": factors,
+                "minmaxsketch": minmaxsketch,
+                "bucket_means":bucket_means,
+                "keys":keys,
                 "tensor_shape":pruned_tensor[0].shape
             }
             # updte the reference tensor
@@ -174,9 +169,11 @@ class SplitFramework():
             torch.cuda.synchronize()
             self._framework_head_time+=self.time_start.elapsed_time(self.time_end)
         else:
-            factors, compressed_size, reconstructed_tensor = self.compressor(pruned_tensor[0])
+            minmaxsketch, bucket_means,keys, compressed_size, reconstructed_tensor = self.compressor(pruned_tensor[0])
             payload = {
-                "factors": factors,
+                "minmaxsketch": minmaxsketch,
+                "bucket_means":bucket_means,
+                "keys":keys,
                 "tensor_shape":pruned_tensor[0].shape
             }
             # updte the reference tensor
@@ -190,7 +187,7 @@ class SplitFramework():
     def split_framework_decode(self,tensor_dict):
         if __COLLECT_FRAMEWORK_TIME__:
             self.time_start.record()
-            reconstructed_tensor = self.decompressor(tensor_dict["tensor_size"],tensor_dict["factors"])
+            reconstructed_tensor = self.decompressor(tensor_dict["tensor_shape"],tensor_dict["minmaxsketch"],tensor_dict["bucket_means"],tensor_dict["keys"])
             self.time_end.record()
             torch.cuda.synchronize()
             self._decompression_time = self.time_start.elapsed_time(self.time_end)
@@ -202,7 +199,7 @@ class SplitFramework():
             torch.cuda.synchronize()
             self._framework_tail_time = self.time_start.elapsed_time(self.time_end)
         else:
-            reconstructed_tensor =  self.decompressor(tensor_dict["tensor_size"],tensor_dict["factors"])
+            reconstructed_tensor =  self.decompressor(tensor_dict["tensor_shape"],tensor_dict["minmaxsketch"],tensor_dict["bucket_means"],tensor_dict["keys"])
             reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
             self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
@@ -374,7 +371,12 @@ class MinMaxSketchV2(object):
     #     self.n += value
     #     for table, i in zip(self.tables, self._hash(x)):
     #         table[i] += value
-    
+    def update_table (self, table):
+        self.tables = table
+
+    def reset_table(self):
+        self.tables = np.full([self.d,self.m],255,dtype=np.int32)
+
     def add(self,key,value):
         results = np.zeros(self.d, dtype=np.int32)
         self._hash2(key,self.d, self.m,results)

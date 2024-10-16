@@ -7,7 +7,7 @@ import numpy as np
 import time
 import torch
 import os
-from split_framework.stable.split_framework_decomposition import SplitFramework
+from split_framework.stable.split_framework_sketchml import SplitFramework
 
 import tqdm
 import numpy as np
@@ -21,7 +21,7 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-__COMPRESSION_TECHNIQUE__ = "decomposition"
+__COMPRESSION_TECHNIQUE__ = "sketchml"
 
 N_warmup = 0
 split_layer= int(sys.argv[1])
@@ -31,7 +31,7 @@ testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "decomposition"
+test_case = "sketchml"
 service_uri = "http://10.0.1.34:8090/tensor"
 reset_uri = "http://10.0.1.34:8090/reset"
 
@@ -203,6 +203,8 @@ if __name__ == "__main__":
                 quality = i+1
             elif __COMPRESSION_TECHNIQUE__ =="decomposition":
                 quality = (i+1)*2
+            elif __COMPRESSION_TECHNIQUE__ =="sketchml":
+                quality = [256, (i+1)*0.1, (i+1)]
             else:
                 raise Exception("Unknown compression techique!")
             # thresh = 0.0
