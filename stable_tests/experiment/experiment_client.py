@@ -146,7 +146,7 @@ def write_time_data(sf, thresh,quality,frame_id):
     compression_time, decompression_time = sf.get_compression_time_measurement()
     overall_time = sf.get_overall_time_measurement()
 
-    with open(map_output_path,'a') as f:
+    with open(time_output_path,'a') as f:
         f.write(str(thresh)+","
                 +str(quality)+","
                 +str(frame_id)+","

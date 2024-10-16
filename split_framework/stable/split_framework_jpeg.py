@@ -10,10 +10,10 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import load_classes, rescale_boxes, non_max_suppression, print_environment_info
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
-__COLLECT_TENSOR_RECONSTRUCT__ = False
-__COLLECT_FRAMEWORK_TIME__ = False
-__COLLECT_OVERALL_TIME__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
+__COLLECT_TENSOR_RECONSTRUCT__ = True
+__COLLECT_FRAMEWORK_TIME__ = True
+__COLLECT_OVERALL_TIME__ = True
 ################################### class definition ###################################
 class SplitFramework():
 
@@ -89,7 +89,6 @@ class SplitFramework():
             self.time_start.record()
             # Framework Head #
             diff_tensor = head_tensor-self.reference_tensor
-            self.diff_tensor_sparsity.append(torch.sum(diff_tensor==0).cpu().item()/self.tensor_size)
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
