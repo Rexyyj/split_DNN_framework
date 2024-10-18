@@ -7,7 +7,7 @@ import numpy as np
 import time
 import torch
 import os
-from split_framework.stable.split_framework_sketchml import SplitFramework
+from split_framework.stable.split_framework_jpeg import SplitFramework
 import tqdm
 import numpy as np
 import requests, pickle
@@ -20,7 +20,7 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-__COMPRESSION_TECHNIQUE__ = "sketchml"
+__COMPRESSION_TECHNIQUE__ = "jpeg"
 
 N_warmup = 0
 split_layer= int(sys.argv[1])
@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "sketchml"
+test_case = "sensitivity_test"
 service_uri = "http://10.0.1.34:8090/tensor"
 reset_uri = "http://10.0.1.34:8090/reset"
 
@@ -259,6 +259,7 @@ if __name__ == "__main__":
             # Concatenate sample statistics
             true_positives, pred_scores, pred_labels = [
                 np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+            print(true_positives)
             metrics_output = ap_per_class(
                 true_positives, pred_scores, pred_labels, labels)
 
