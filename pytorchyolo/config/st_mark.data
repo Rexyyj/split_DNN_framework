@@ -1,0 +1,4 @@
+classes= 80
+train=data/st_mark/train.txt
+valid=data/st_mark/valid.txt
+names=data/st_mark/coco.names
