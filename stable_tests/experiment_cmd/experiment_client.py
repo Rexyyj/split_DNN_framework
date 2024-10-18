@@ -25,12 +25,12 @@ __COMPRESSION_TECHNIQUE__ = "jpeg"
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
-# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
-testdata_path = "../../St_Marc_dataset/data/test_0.txt"
+testdata_path = "../../St_Marc_dataset/data/test_10_fps_cleaned.txt"
+# testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "sensitivity_test"
+test_case = "sensitivity_10_fps"
 service_uri = "http://10.0.1.34:8090/tensor"
 reset_uri = "http://10.0.1.34:8090/reset"
 
@@ -75,6 +75,7 @@ except:
 with open(map_output_path,'a') as f:
     title = ("pruning_thresh,"
             "quality,"
+            "sensitivity,"
             "map\n")
     f.write(title)
 
@@ -179,12 +180,13 @@ def write_characteristic(sf, thresh,quality,frame_id):
                 +str(reconstruct_snr)+"\n"
                 )
         
-def write_map( thresh,quality,map_value):
+def write_map( thresh,quality,sensitivity_value,map_value):
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
     with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
                         +str(quality)+","
+                        +str(sensitivity_value)+","
                         +str(map_value)+"\n"
                         )
 ################################### Main function ###################################
@@ -198,8 +200,8 @@ if __name__ == "__main__":
     dataloader = create_data_loader(testdata_path)
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     class_names = load_classes(class_name_path)  # List of class names
-    for j in range(1):
-        for i in range(1):
+    for j in range(5):
+        for i in range(5):
             reset_required = True
             while reset_required:
                 r = requests.post(url=reset_uri)
@@ -259,13 +261,13 @@ if __name__ == "__main__":
             # Concatenate sample statistics
             true_positives, pred_scores, pred_labels = [
                 np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
-            print(true_positives)
+            sensitivity = np.sum(true_positives) / len(labels)
             metrics_output = ap_per_class(
                 true_positives, pred_scores, pred_labels, labels)
 
             precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
             ## Save data
-            write_map(thresh,quality,(AP[0]+AP[1])/2)
+            write_map(thresh,quality,sensitivity,(AP[0]+AP[1])/2)
                 
 
                 
