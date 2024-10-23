@@ -10,7 +10,7 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -67,8 +67,8 @@ class SplitFramework():
                 try:
                     ft = tl.decomposition.parafac(tensor[i], rank=self.quality)
                     factors.append(ft)
-                    compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4
-                    compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4
+                    compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])
+                    compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])
                 except:
                     factors.append(0)
         reconstructed_tensor = self.decompressor(tensor.shape, factors)

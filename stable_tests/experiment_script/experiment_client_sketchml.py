@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "sketchml"
+test_case = "sketchml_v2"
 service_uri = "http://10.0.1.34:8094/tensor"
 reset_uri = "http://10.0.1.34:8094/reset"
 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
             
             frame_predicts = []
-            thresh = 0.02*(j+1)
+            thresh = 0.05*(j+1)
             
             if __COMPRESSION_TECHNIQUE__ == "jpeg":
                 quality =60+10*i
@@ -221,7 +221,7 @@ if __name__ == "__main__":
             elif __COMPRESSION_TECHNIQUE__ =="decomposition":
                 quality = (i+1)*2
             elif __COMPRESSION_TECHNIQUE__ =="sketchml":
-                quality = [256, (i+1)*0.1, (i+1)]
+                quality = [256, (i+1)*0.2, 3]
             else:
                 raise Exception("Unknown compression techique!")
             # thresh = 0.0

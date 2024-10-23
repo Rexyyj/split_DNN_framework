@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "decomposition"
+test_case = "decomposition_v2"
 service_uri = "http://10.0.1.34:8091/tensor"
 reset_uri = "http://10.0.1.34:8091/reset"
 

@@ -31,7 +31,7 @@ N_warmup = 0
 split_layer= int(sys.argv[1])
 test_fps = int(sys.argv[2])
 
-testdata_path = "./data/test_"+str(test_fps)+"_fps_cleaned.txt"
+testdata_path = "./data/shuffle_sub_sample_test_"+str(test_fps)+"fps.txt"
 class_name_path = "./data/coco.names"
 log_dir = "./measurements/jpeg/"+str(test_fps)+"_fps/"
 
@@ -146,8 +146,8 @@ if __name__ == "__main__":
     dataloader = create_data_loader(testdata_path)
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     class_names = load_classes(class_name_path)  # List of class names
-    for j in range(5):
-        for i in range(5):
+    for j in range(1):
+        for i in range(1):
             reset_required = True
             while reset_required:
                 r = requests.post(url=reset_uri)
@@ -160,10 +160,10 @@ if __name__ == "__main__":
 
             
             frame_predicts = []
-            thresh = 0.02*(j+1)
-            quality =60+10*i
-            # thresh = 0.0
-            # quality =100
+            # thresh = 0.02*(j+1)
+            # quality =60+10*i
+            thresh = 0.0
+            quality =100
             print("Testing threshold: ",thresh,", Jpeg quality: ",quality)
             sf = SplitFramework(device="cuda")
             sf.set_reference_tensor(dummy_head_tensor)
@@ -247,30 +247,30 @@ if __name__ == "__main__":
 
             precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
             ## Save data
-            with open(map_output_path,'a') as f:
-                f.write(str(thresh)+","
-                        +str(quality)+","
-                        +str(np.array(transfer_data_size).mean())+","
-                        +str(np.array(transfer_data_size).std())+","
-                        +str((AP[0]+AP[1])/2)+"\n"
-                        )
+            # with open(map_output_path,'a') as f:
+            #     f.write(str(thresh)+","
+            #             +str(quality)+","
+            #             +str(np.array(transfer_data_size).mean())+","
+            #             +str(np.array(transfer_data_size).std())+","
+            #             +str((AP[0]+AP[1])/2)+"\n"
+            #             )
                 
-            with open(time_output_path,'a') as f:
-                f.write(str(thresh)+","
-                        +str(quality)+","
-                        +str(np.array(head_time).mean())+","
-                        +str(np.array(head_time).std())+","
-                        +str(np.array(tail_time).mean())+","
-                        +str(np.array(tail_time).std())+","
-                        +str(np.array(framework_time).mean())+","
-                        +str(np.array(framework_time).std())+","
-                        +str(np.array(jpeg_time).mean())+","
-                        +str(np.array(jpeg_time).std())+","
-                        +str(np.array(encode_time).mean())+","
-                        +str(np.array(encode_time).std())+","
-                        +str(np.array(decode_time).mean())+","
-                        +str(np.array(decode_time).std())+","
-                        +str(np.array(request_time).mean())+","
-                        +str(np.array(request_time).std())+"\n"
-                )
+            # with open(time_output_path,'a') as f:
+            #     f.write(str(thresh)+","
+            #             +str(quality)+","
+            #             +str(np.array(head_time).mean())+","
+            #             +str(np.array(head_time).std())+","
+            #             +str(np.array(tail_time).mean())+","
+            #             +str(np.array(tail_time).std())+","
+            #             +str(np.array(framework_time).mean())+","
+            #             +str(np.array(framework_time).std())+","
+            #             +str(np.array(jpeg_time).mean())+","
+            #             +str(np.array(jpeg_time).std())+","
+            #             +str(np.array(encode_time).mean())+","
+            #             +str(np.array(encode_time).std())+","
+            #             +str(np.array(decode_time).mean())+","
+            #             +str(np.array(decode_time).std())+","
+            #             +str(np.array(request_time).mean())+","
+            #             +str(np.array(request_time).std())+"\n"
+            #     )
                 
