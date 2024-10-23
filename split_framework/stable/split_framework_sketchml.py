@@ -18,7 +18,7 @@ import pickle
 import requests
 from pytorchyolo.utils.utils import  non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = True
+__COLLECT_TENSOR_CHARACTERISTIC__ = False
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -89,7 +89,10 @@ class SplitFramework():
                 bucket_mask = (values<quantiles[k]) ^ (values<quantiles[k-1])
             else:
                 bucket_mask = values > quantiles[k-1]
-            bucket_means[k] = values[bucket_mask].mean()
+            if len(values[bucket_mask]) == 0:
+                bucket_means[k] = 0
+            else:
+                bucket_means[k] = values[bucket_mask].mean()
             bucket_index[bucket_mask] = k
 
         return bucket_means, bucket_index, keys
@@ -106,9 +109,9 @@ class SplitFramework():
         
         # Encoding
         encode_key = []
-        for i in range(256):
+        for i in range(self.sketch_q):
             encode_key.append(i)
-        # encode_key.append(255)
+        encode_key.append(255)
         encoder = HuffmanCodec.from_data(encode_key)
 
         compressed_size = 0
@@ -243,7 +246,8 @@ class SplitFramework():
                 self._decompression_time = response["decmp_time"]
 
                 return response["detection"]
-        except:
+        except Exception as error:
+            print(error)
             self._datasize_est=-1
             self._datasize_real=-1
             self._overall_time = -1
