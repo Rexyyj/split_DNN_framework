@@ -111,7 +111,7 @@ class SplitFramework():
         encode_key = []
         for i in range(self.sketch_q):
             encode_key.append(i)
-        encode_key.append(128)
+        # encode_key.append(128)
         encoder = HuffmanCodec.from_data(encode_key)
 
         compressed_size = 0
@@ -370,7 +370,7 @@ class MinMaxSketchV2(object):
         self.d = d
         self.n = 0
         self.tables = []
-        self.tables = np.full([self.d,self.m],128,dtype=np.uint8)
+        self.tables = np.full([self.d,self.m],127,dtype=np.uint8)
         # for _ in range(d):
         #     # table = array.array("l", (999 for _ in range(m)))
         #     # self.tables.append(table)
@@ -397,7 +397,7 @@ class MinMaxSketchV2(object):
         self.tables = table
 
     def reset_table(self):
-        self.tables = np.full([self.d,self.m],128,dtype=np.uint8)
+        self.tables = np.full([self.d,self.m],127,dtype=np.uint8)
 
     def add(self,key,value):
         results = np.zeros(self.d, dtype=np.int32)
