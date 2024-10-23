@@ -370,7 +370,7 @@ class MinMaxSketchV2(object):
         self.d = d
         self.n = 0
         self.tables = []
-        self.tables = np.full([self.d,self.m],255,dtype=np.int32)
+        self.tables = np.full([self.d,self.m],128,dtype=np.int8)
         # for _ in range(d):
         #     # table = array.array("l", (999 for _ in range(m)))
         #     # self.tables.append(table)
