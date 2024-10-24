@@ -18,7 +18,7 @@ import pickle
 import requests
 from pytorchyolo.utils.utils import  non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = True
+__COLLECT_TENSOR_CHARACTERISTIC__ = False
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -453,14 +453,14 @@ class MinMaxSketchV2(object):
 
 
     def query_array(self, keys):
-        result = np.zeros(len(keys),dtype = np.int32)
+        result = np.zeros(len(keys),dtype = np.uint8)
         self._query_array(keys,self.tables,self.d,self.m,result)
         return result
     # def query(self, key):
     #     return max(table[i] for table, i in zip(self.tables, self._hash(key)))
     
     def query(self, key):
-        result = np.zeros(self.d,dtype = np.int32)
+        result = np.zeros(self.d,dtype = np.uint8)
         self._hash2(key,self.d,self.m,result)
         return max(table[i] for table, i in zip(self.tables, result))
 
