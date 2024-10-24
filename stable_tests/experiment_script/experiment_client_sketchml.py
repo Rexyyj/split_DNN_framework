@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "sketchml_v3"
+test_case = "sketchml_sens"
 service_uri = "http://10.0.1.34:8094/tensor"
 reset_uri = "http://10.0.1.34:8094/reset"
 
@@ -75,6 +75,7 @@ except:
 with open(map_output_path,'a') as f:
     title = ("pruning_thresh,"
             "quality,"
+            "sensitivity,"
             "map\n")
     f.write(title)
 
@@ -179,12 +180,13 @@ def write_characteristic(sf, thresh,quality,frame_id):
                 +str(reconstruct_snr)+"\n"
                 )
         
-def write_map( thresh,quality,map_value):
+def write_map( thresh,quality,sensitivity, map_value):
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
     with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
                         +str(quality)+","
+                        +str(sensitivity)+","
                         +str(map_value)+"\n"
                         )
 ################################### Main function ###################################
@@ -221,7 +223,7 @@ if __name__ == "__main__":
             elif __COMPRESSION_TECHNIQUE__ =="decomposition":
                 quality = (i+1)*2
             elif __COMPRESSION_TECHNIQUE__ =="sketchml":
-                quality = [128, (i+1)*0.2, 3]
+                quality = [128, (i+1)*0.01, 5]
             else:
                 raise Exception("Unknown compression techique!")
             # thresh = 0.0
@@ -261,10 +263,10 @@ if __name__ == "__main__":
                 np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
             metrics_output = ap_per_class(
                 true_positives, pred_scores, pred_labels, labels)
-
+            sensitivity = len(true_positives)/len(labels)
             precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
             ## Save data
-            write_map(thresh,quality,(AP[0]+AP[1])/2)
+            write_map(thresh,quality,sensitivity,(AP[0]+AP[1])/2)
                 
 
                 

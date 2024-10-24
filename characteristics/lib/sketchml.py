@@ -49,7 +49,7 @@ class MinMaxSketchV2(object):
         self.d = d
         self.n = 0
         self.tables = []
-        self.tables = np.full([self.d,self.m],255,dtype=np.int32)
+        self.tables = np.full([self.d,self.m],127,dtype=np.uint8)
         # for _ in range(d):
         #     # table = array.array("l", (999 for _ in range(m)))
         #     # self.tables.append(table)
@@ -74,7 +74,7 @@ class MinMaxSketchV2(object):
     #         table[i] += value
     
     def add(self,key,value):
-        results = np.zeros(self.d, dtype=np.int32)
+        results = np.zeros(self.d, dtype=np.uint8)
         self._hash2(key,self.d, self.m,results)
         for table, code in zip(self.tables, results):
             if table[code] > value:
@@ -127,14 +127,14 @@ class MinMaxSketchV2(object):
 
 
     def query_array(self, keys):
-        result = np.zeros(len(keys),dtype = np.int32)
+        result = np.zeros(len(keys),dtype = np.uint8)
         self._query_array(keys,self.tables,self.d,self.m,result)
         return result
     # def query(self, key):
     #     return max(table[i] for table, i in zip(self.tables, self._hash(key)))
     
     def query(self, key):
-        result = np.zeros(self.d,dtype = np.int32)
+        result = np.zeros(self.d,dtype = np.uint8)
         self._hash2(key,self.d,self.m,result)
         return max(table[i] for table, i in zip(self.tables, result))
 
@@ -182,7 +182,11 @@ def get_bucket_index(tensor, n_buckets):
                 bucket_mask = (values<quantiles[k]) ^ (values<quantiles[k-1])
             else:
                 bucket_mask = values > quantiles[k-1]
-            bucket_means[k] = values[bucket_mask].mean()
+            if len(values[bucket_mask]) == 0:
+                bucket_means[k] = 0
+            else:
+                bucket_means[k] = values[bucket_mask].mean()
+            bucket_index[bucket_mask] = k
             bucket_index[bucket_mask] = k
 
         return bucket_means, bucket_index, keys
@@ -200,7 +204,7 @@ def compressor_sketchml(tensor, sketch_q, sketch_m, sketch_d):
     
     # Encoding
     encode_key = []
-    for i in range(256):
+    for i in range(128):
         encode_key.append(i)
     # encode_key.append(255)
     encoder = HuffmanCodec.from_data(encode_key)

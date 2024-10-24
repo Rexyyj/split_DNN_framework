@@ -1,7 +1,7 @@
 import os
 
-image_dir = "./30_fps/images/"
-output_file = "./test_30_fps.txt"
+image_dir = "/home/rex/dataset/coco/images/"
+output_file = "./coco_val.txt"
 
 
 def sort_func(name):
@@ -9,7 +9,7 @@ def sort_func(name):
     return int(num)
 
 images = os.listdir(image_dir)
-images.sort(key=sort_func)
+# images.sort(key=sort_func)
 abs_dir  = os.path.abspath(image_dir) +"/"
 try:
     os.system("rm -rf "+ output_file)

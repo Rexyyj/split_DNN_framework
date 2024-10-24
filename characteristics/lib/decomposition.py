@@ -28,8 +28,8 @@ def compressor_decomposition_slice_quality(tensor,ratio):
                 rank =1
             ft = tl.decomposition.parafac(tensor[i], rank=rank)
             factors.append(ft)
-            compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4
-            compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4
+            compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])
+            compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])
     return factors, compressed_size
 
 def compressor_decomposition_slice(tensor):
@@ -43,8 +43,8 @@ def compressor_decomposition_slice(tensor):
             rank = int(torch.linalg.matrix_rank(tensor[i]))
             ft = tl.decomposition.parafac(tensor[i], rank=rank)
             factors.append(ft)
-            compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4
-            compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4
+            compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])
+            compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])
     return factors, compressed_size
 
 def decompressor_decomposition_slice(tensor_shape,factors):
