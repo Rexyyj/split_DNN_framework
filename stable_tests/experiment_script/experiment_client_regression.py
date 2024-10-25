@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "regression_sens"
+test_case = "regression_sens_2"
 service_uri = "http://10.0.1.34:8093/tensor"
 reset_uri = "http://10.0.1.34:8093/reset"
 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     dataloader = create_data_loader(testdata_path)
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     class_names = load_classes(class_name_path)  # List of class names
-    for j in range(5):
+    for j in range(2):
         for i in range(5):
             reset_required = True
             while reset_required:
@@ -214,7 +214,8 @@ if __name__ == "__main__":
 
             
             frame_predicts = []
-            thresh = 0.05*(j+1)
+            # thresh = 0.05*(j+1)
+            thresh = 0.05*(j+1) +0.25
             
             if __COMPRESSION_TECHNIQUE__ == "jpeg":
                 quality =60+10*i

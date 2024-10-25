@@ -18,7 +18,7 @@ import pickle
 import requests
 from pytorchyolo.utils.utils import  non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True

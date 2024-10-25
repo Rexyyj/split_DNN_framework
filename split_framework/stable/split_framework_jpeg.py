@@ -10,7 +10,7 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -104,10 +104,16 @@ class SplitFramework():
             # Framework Head #
 
         if __COLLECT_TENSOR_CHARACTERISTIC__:
-            self._sparsity = calculate_sparsity(pruned_tensor[0].cpu().numpy())
-            self._decomposability = get_tensor_decomposability(pruned_tensor[0])
-            self._pictoriality=get_tensor_pictoriality(pruned_tensor[0])
-            self._regularity = get_tensor_regularity(pruned_tensor[0])
+            try:
+                self._sparsity = calculate_sparsity(pruned_tensor[0].cpu().numpy())
+                self._decomposability = get_tensor_decomposability(pruned_tensor[0])
+                self._pictoriality=get_tensor_pictoriality(pruned_tensor[0])
+                self._regularity = get_tensor_regularity(pruned_tensor[0])
+            except:
+                self._sparsity =-1
+                self._decomposability=-1
+                self._pictoriality=-1
+                self._regularity=-1
 
         if __COLLECT_FRAMEWORK_TIME__:
             self.time_start.record()
@@ -204,7 +210,8 @@ class SplitFramework():
                 self._decompression_time = response["decmp_time"]
 
                 return response["detection"]
-        except:
+        except Exception as error:
+            print (error)
             self._datasize_est=-1
             self._datasize_real=-1
             self._overall_time = -1
