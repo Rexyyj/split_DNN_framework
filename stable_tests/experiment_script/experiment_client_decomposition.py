@@ -267,7 +267,7 @@ if __name__ == "__main__":
             sensitivity = np.sum(true_positives)/len(labels)
             precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
             ## Save data
-            write_map(thresh,sensitivity,quality,(AP[0]+AP[1])/2)
+            write_map(thresh,quality,sensitivity,(AP[0]+AP[1])/2)
                 
 
                 
