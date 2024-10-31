@@ -15,6 +15,7 @@ import torchvision.ops.boxes as bops
 import os
 from torch import tensor
 from split_framework.yolov3_tensor_jpeg_v2 import SplitFramework
+
 import requests
 import pickle
 from torchmetrics.detection import MeanAveragePrecision
@@ -24,13 +25,13 @@ video_path = "../dataset/test/"
 label_path = "../dataset/test_label/"
 video_files = os.listdir(video_path)
 video_names = [name.replace('.mov','') for name in video_files]
-N_frame = 105
+N_frame = 10
 N_warmup = 5
 split_layer= int(sys.argv[1])
 
 test_case = "tensor_jpeg"
-service_uri = "http://10.0.1.23:8090/tensor_jpeg"
-reset_uri = "http://10.0.1.23:8090/reset"
+service_uri = "http://10.0.1.34:8090/tensor_jpeg"
+reset_uri = "http://10.0.1.34:8090/reset"
 
 log_dir = "../measurements/yolo_tiny_splitpoint/layer_"+str(split_layer)+"/"
 measurement_path = log_dir+test_case+"/"
@@ -102,6 +103,8 @@ with open(time_output_path,'a') as f:
             "tail_time_std,"
             "framework_time_mean,"
             "framework_time_std,"
+            "jpeg_time_mean,"
+            "jpeg_time_std,"
             "encode_time_mean,"
             "encode_time_std,"
             "decode_time_mean,"
@@ -167,7 +170,7 @@ def load_video_frames(video_dir, video_name, samples_number=-1): #samples_number
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/weights/yolov3-tiny.weights")
+    model = models_split_tiny.load_model("../pytorchyolo/config/yolov3-tiny.cfg","../pytorchyolo/checkpoints/yolov3_ckpt_300.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -177,8 +180,8 @@ if __name__ == "__main__":
         test_frames = load_video_frames(video_path,video_name, N_frame)
         frame_labels = load_ground_truth(video_name)
 
-        for j in range(10):
-            for i in range(5):
+        for j in range(1):
+            for i in range(1):
                 reset_required = True
                 while reset_required:
                     r = requests.post(url=reset_uri)
@@ -210,6 +213,7 @@ if __name__ == "__main__":
                 decode_time=[]
                 request_time=[]
                 framework_time=[]
+                jpeg_time = []
                 #####################################################################
                 for index in range(len(test_frames)):
                     inWarmup = True
@@ -222,7 +226,7 @@ if __name__ == "__main__":
                         if inWarmup:
                             frame_tensor = convert_rgb_frame_to_tensor(frame)
                             head_tensor = model(frame_tensor, 1)
-                            framework_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                            framework_t,jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                             r = requests.post(url=service_uri, data=data_to_trans)
                             response = pickle.loads(r.content)
                             continue
@@ -232,6 +236,7 @@ if __name__ == "__main__":
                         time_start.record()
                         frame_tensor = convert_rgb_frame_to_tensor(frame)
                         head_tensor = model(frame_tensor, 1)
+                        torch.save(head_tensor, "./tensors/tensor_l8_"+video_name+str(index)+".pt")
                         time_end.record()
                         torch.cuda.synchronize()
                         head_time.append(time_start.elapsed_time(time_end))
@@ -239,12 +244,13 @@ if __name__ == "__main__":
                     
                         ##### Framework Encoding #####
                         time_start.record()
-                        framework_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
+                        framework_t, jpeg_t,data_to_trans = sf.split_framework_encode(index, head_tensor)
                         time_end.record()
                         torch.cuda.synchronize()
                         encode_time.append(time_start.elapsed_time(time_end))
                         transfer_data_size.append(len(data_to_trans))
                         framework_time.append(framework_t)
+                        jpeg_time.append(jpeg_t)
                         ##### Framework Encoding #####
 
                         ##### Send request #####
@@ -303,6 +309,8 @@ if __name__ == "__main__":
                             +str(np.array(tail_time).std())+","
                             +str(np.array(framework_time).mean())+","
                             +str(np.array(framework_time).std())+","
+                            +str(np.array(jpeg_time).mean())+","
+                            +str(np.array(jpeg_time).std())+","
                             +str(np.array(encode_time).mean())+","
                             +str(np.array(encode_time).std())+","
                             +str(np.array(decode_time).mean())+","

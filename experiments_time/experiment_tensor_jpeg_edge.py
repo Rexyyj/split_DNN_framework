@@ -15,7 +15,7 @@ import pandas as pd
 import time
 import torch
 import pickle
-from split_framework.yolov3_tensor_jpeg import SplitFramework
+from split_framework.yolov3_tensor_jpeg_v4 import SplitFramework
 from torch.profiler import profile, record_function, ProfilerActivity
 
 def get_dummy_tensor(split_layer):
