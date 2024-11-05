@@ -85,10 +85,10 @@ class SplitFramework():
         return normalize_base, scale,zero_point, encoded_data, reconstructed_tensor
 
 
-    def decompressor_jpeg(self, tensor_dict):
-        decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(tensor_dict["encoded"],"GRAY")).to(self.device)
+    def decompressor_jpeg(self, encoded, zero, scale, normal):
+        decoded_data = torch.from_numpy(simplejpeg.decode_jpeg(encoded,"GRAY")).to(self.device)
         reconstructed_tensor = decoded_data.reshape(self.tensor_shape)
-        reconstructed_tensor = (reconstructed_tensor.to(torch.float)-tensor_dict["zero"]) * tensor_dict["scale"] * tensor_dict["normal"]
+        reconstructed_tensor = (reconstructed_tensor.to(torch.float)-zero) * scale * normal
         return reconstructed_tensor
     
     def compressor_decomposition(self,tensor):
@@ -296,11 +296,11 @@ class SplitFramework():
         if __COLLECT_FRAMEWORK_TIME__:
             self.time_start.record()
             if tensor_dict["tech"]==1:
-                reconstructed_tensor = self.decompressor_jpeg(tensor_dict)
+                reconstructed_tensor = self.decompressor_jpeg(tensor_dict["encoded"],tensor_dict["zero"],tensor_dict["scale"],tensor_dict["normal"])
             elif tensor_dict["tech"]==2:
-                reconstructed_tensor = self.decompressor_decomposition(tensor_dict)
+                reconstructed_tensor = self.decompressor_decomposition(tensor_dict["tensor_shape"],tensor_dict["factors"])
             elif tensor_dict["tech"] ==3:
-                reconstructed_tensor = self.decompressor_regression(tensor_dict)
+                reconstructed_tensor = self.decompressor_regression(tensor_dict["tensor_shape"],tensor_dict["factors"],tensor_dict["x_pos"],tensor_dict["x_neg"])
             else:
                 raise Exception("Unknow compression technique!!!")
             self.time_end.record()
@@ -315,11 +315,11 @@ class SplitFramework():
             self._framework_tail_time = self.time_start.elapsed_time(self.time_end)
         else:
             if tensor_dict["tech"]==1:
-                reconstructed_tensor = self.decompressor_jpeg(tensor_dict)
+                reconstructed_tensor = self.decompressor_jpeg(tensor_dict["encoded"],tensor_dict["zero"],tensor_dict["scale"],tensor_dict["normal"])
             elif tensor_dict["tech"]==2:
-                reconstructed_tensor = self.decompressor_decomposition(tensor_dict)
+                reconstructed_tensor = self.decompressor_decomposition(tensor_dict["tensor_shape"],tensor_dict["factors"])
             elif tensor_dict["tech"] ==3:
-                reconstructed_tensor = self.decompressor_regression(tensor_dict)
+                reconstructed_tensor = self.decompressor_regression(tensor_dict["tensor_shape"],tensor_dict["factors"],tensor_dict["x_pos"],tensor_dict["x_neg"])
             else:
                 raise Exception("Unknow compression technique!!!")
             reconstructed_head_tensor = self.reference_tensor + reconstructed_tensor
