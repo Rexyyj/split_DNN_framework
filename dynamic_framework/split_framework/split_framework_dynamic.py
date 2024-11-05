@@ -106,7 +106,7 @@ class SplitFramework():
                     compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])
                 except:
                     factors.append(0)
-        reconstructed_tensor = self.decompressor(tensor.shape, factors)
+        reconstructed_tensor = self.decompressor_decomposition(tensor.shape, factors)
         return factors, compressed_size, reconstructed_tensor 
 
 
@@ -140,7 +140,7 @@ class SplitFramework():
                 x_neg.append(t<0)
                 # compressed_size +=  tensor.shape[1]*tensor.shape[2]/4 + self.quality*4
                 compressed_size += len(t[mask])
-        reconstructed_tensor = self.decompressor(tensor.shape,factors, x_pos, x_neg)
+        reconstructed_tensor = self.decompressor_regression(tensor.shape,factors, x_pos, x_neg)
         return factors, x_pos, x_neg, compressed_size,reconstructed_tensor
 
 

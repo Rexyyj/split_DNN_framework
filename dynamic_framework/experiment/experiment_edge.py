@@ -1,13 +1,14 @@
 import sys
 # setting path
 sys.path.append('../../')
+sys.path.append('../')
 
 import cherrypy
 
 from  pytorchyolo import models_split_tiny
 import torch
 import pickle
-from split_framework.stable.split_framework_jpeg import SplitFramework
+from split_framework.split_framework_dynamic import SplitFramework
 
 def get_dummy_tensor(split_layer):
     if split_layer==8:

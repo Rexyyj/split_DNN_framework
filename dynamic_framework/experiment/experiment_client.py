@@ -1,6 +1,7 @@
 ################################### setting path ###################################
 import sys
 sys.path.append('../')
+sys.path.append('../../')
 ################################### import libs ###################################
 from  pytorchyolo import  models_split_tiny
 import numpy as np
