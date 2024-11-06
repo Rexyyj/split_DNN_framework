@@ -9,7 +9,7 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = True
+__COLLECT_TENSOR_CHARACTERISTIC__ = False
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -156,7 +156,7 @@ class SplitFramework():
             self.reference_tensor = self.reference_tensor + reconstructed_tensor
 
         if __COLLECT_TENSOR_RECONSTRUCT__:
-            self._reconstruct_snr = calculate_snr(reconstructed_tensor.reshape(self.tensor_size).cpu().numpy() , head_tensor.reshape(self.tensor_size).cpu().numpy())
+            self._reconstruct_snr = calculate_snr(head_tensor.reshape(self.tensor_size).cpu().numpy(),self.reference_tensor.reshape(self.tensor_size).cpu().numpy())
 
         request_payload = pickle.dumps(payload)
         self._datasize_est = compressed_size

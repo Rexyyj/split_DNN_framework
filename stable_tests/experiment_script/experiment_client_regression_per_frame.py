@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "regression_per_frame"
+test_case = "regression_snr"
 service_uri = "http://10.0.1.34:8093/tensor"
 reset_uri = "http://10.0.1.34:8093/reset"
 
@@ -217,7 +217,7 @@ if __name__ == "__main__":
             
             frame_predicts = []
             # thresh = 0.05*(j+1)
-            thresh = 0.05*(j+1)
+            thresh = 0.05*(j)
             
             if __COMPRESSION_TECHNIQUE__ == "jpeg":
                 quality =60+10*i
@@ -262,14 +262,17 @@ if __name__ == "__main__":
                 sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
         
                 # Concatenate sample statistics
-                true_positives, pred_scores, pred_labels = [
-                    np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
-                metrics_output = ap_per_class(
-                    true_positives, pred_scores, pred_labels, labels)
-                sensitivity = np.sum(true_positives)/len(labels)
-                precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
-                ## Save data
-                write_map(thresh,quality,frame_index,sensitivity,AP.mean())
+                try:
+                    true_positives, pred_scores, pred_labels = [
+                        np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+                    metrics_output = ap_per_class(
+                        true_positives, pred_scores, pred_labels, labels)
+                    sensitivity = np.sum(true_positives)/len(labels)
+                    precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
+                    ## Save data
+                    write_map(thresh,quality,frame_index,sensitivity,AP.mean())
+                except:
+                    write_map(thresh,quality,frame_index,0,0)
                 
 
                 
