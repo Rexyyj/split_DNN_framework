@@ -30,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "regression_snr"
+test_case = "regression_snr_cha"
 service_uri = "http://10.0.1.34:8093/tensor"
 reset_uri = "http://10.0.1.34:8093/reset"
 
@@ -105,6 +105,7 @@ with open(characteristic_output_path,'a') as f:
             "pictoriality,"
             "datasize_est,"
             "datasize_real,"
+            "reconstruct_evm,"
             "reconstruct_snr\n")
     f.write(title)
 
@@ -163,6 +164,7 @@ def write_characteristic(sf, thresh,quality,frame_id):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
+    reconstruct_evm = sf.get_reconstruct_evm()
 
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
@@ -178,6 +180,7 @@ def write_characteristic(sf, thresh,quality,frame_id):
                 +str(pictoriality)+","
                 +str(datasize_est)+","
                 +str(datasize_real)+","
+                +str(reconstruct_evm)+","
                 +str(reconstruct_snr)+"\n"
                 )
         
@@ -217,7 +220,7 @@ if __name__ == "__main__":
             
             frame_predicts = []
             # thresh = 0.05*(j+1)
-            thresh = 0.05*(j)
+            thresh = 0.05*(j+1)
             
             if __COMPRESSION_TECHNIQUE__ == "jpeg":
                 quality =60+10*i

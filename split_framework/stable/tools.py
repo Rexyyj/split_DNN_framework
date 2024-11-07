@@ -84,3 +84,33 @@ def calculate_snr(original_signal, reconstructed_signal): # Require 1-D signal i
     SNR_dB = 10 * np.log10(P_signal / P_noise)
     
     return SNR_dB
+
+def calculate_evm(ideal_signal, received_signal):
+    """
+    Calculate Error Vector Magnitude (EVM) as a percentage.
+
+    Parameters:
+    - received_signal: numpy array of complex numbers representing the received signal.
+    - ideal_signal: numpy array of complex numbers representing the ideal/reference signal.
+
+    Returns:
+    - evm_percentage: EVM as a percentage.
+    """
+
+    # Ensure received and ideal signals are numpy arrays
+    received_signal = np.array(received_signal, dtype=np.complex_)
+    ideal_signal = np.array(ideal_signal, dtype=np.complex_)
+
+    # Calculate the error vector (difference between received and ideal)
+    error_vector = received_signal - ideal_signal
+
+    # Calculate the RMS (Root Mean Square) of the error vector
+    rms_error = np.sqrt(np.mean(np.abs(error_vector) ** 2))
+
+    # Calculate the RMS of the ideal signal
+    rms_ideal = np.sqrt(np.mean(np.abs(ideal_signal) ** 2))
+
+    # EVM as a percentage
+    evm_percentage = (rms_error / rms_ideal) * 100
+
+    return evm_percentage

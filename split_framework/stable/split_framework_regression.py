@@ -9,7 +9,7 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = False
+__COLLECT_TENSOR_CHARACTERISTIC__ = True
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -42,6 +42,7 @@ class SplitFramework():
         self._pictoriality =-1
         self._regularity = -1
         self._reconstruct_snr = -1
+        self._reconstruct_evm = -1
         
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape
@@ -157,6 +158,7 @@ class SplitFramework():
 
         if __COLLECT_TENSOR_RECONSTRUCT__:
             self._reconstruct_snr = calculate_snr(head_tensor.reshape(self.tensor_size).cpu().numpy(),self.reference_tensor.reshape(self.tensor_size).cpu().numpy())
+            self._reconstruct_evm = calculate_evm(head_tensor.reshape(self.tensor_size).cpu().numpy(),self.reference_tensor.reshape(self.tensor_size).cpu().numpy())
 
         request_payload = pickle.dumps(payload)
         self._datasize_est = compressed_size
@@ -236,6 +238,7 @@ class SplitFramework():
             self._pictoriality =-1
             self._regularity = -1
             self._reconstruct_snr = -1
+            self._reconstruct_evm = -1
             return []
 
     def split_framework_service(self, compressed_data):
@@ -295,6 +298,9 @@ class SplitFramework():
 
     def get_reconstruct_snr(self):
         return self._reconstruct_snr
+    
+    def get_reconstruct_evm(self):
+        return self._reconstruct_evm
     
     def get_data_size(self):
         return self._datasize_est, self._datasize_real
