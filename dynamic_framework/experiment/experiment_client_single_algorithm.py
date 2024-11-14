@@ -250,14 +250,15 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                available_bandwidth = 5.1*1e7 - frame_index/4*1e6
+                available_bandwidth = 1.01*1e7 - frame_index/2*1e5
                 mAP_drop = 40
+                technique = 1
 
-                quality, pruning = manager.get_configuration(mAP_drop,available_bandwidth)
+                quality, thresh = manager.get_configuration(mAP_drop,available_bandwidth)
 
                 sf.set_quality(quality)
-                sf.set_compression_technique(1) # set to jpeg
-                sf.set_pruning_threshold(pruning)
+                sf.set_compression_technique(technique) # set to jpeg
+                sf.set_pruning_threshold(thresh)
 
                 # Warmup phase
                 imgs = Variable(imgs.type(Tensor), requires_grad=False)

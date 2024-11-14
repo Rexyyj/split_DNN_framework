@@ -14,10 +14,12 @@ from pymoo.termination.default import DefaultSingleObjectiveTermination
 
 class JPEGProblem(ElementwiseProblem):
 
-    def __init__(self,snr,cmp):
+    def __init__(self,snr,cmp,sample_points,cmp_samples,snr_samples):
         self.snr = snr
         self.cmp = cmp
-        self.sample_points, self.cmp_samples, self.snr_samples = self.get_jpeg_samples()
+        self.sample_points = sample_points
+        self.cmp_samples = cmp_samples
+        self.snr_samples = snr_samples
         super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[60,5], xu=[100,35],vtype=int)
 
     def interpolated_constraint_cmp(self,xy):
@@ -74,16 +76,17 @@ class Manager():
     def get_configuration(self,tolerable_mAP_drop, available_bandwidth): # [%, bps]
         self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
         self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop)
-
-        problem =JPEGProblem(snr=self.target_snr,cmp=self.target_cmp)
+        print(self.target_snr)
+        print(self.target_cmp)
+        problem =JPEGProblem(self.target_snr,self.target_cmp,self.sample_points,self.cmp_samples,self.snr_samples)
         result = minimize(problem, self.algorithm, termination=self.termination)
 
-        if result.X == None:
-            self.target_quality = 60
-            self.target_pruning =0.35
-        else:
+        try:
             self.target_quality = result.X[0]
             self.target_pruning = result.X[1]/100
+        except:
+            self.target_quality = 60
+            self.target_pruning =0.35
         return self.target_quality, self.target_pruning
 
     def get_snr_from_mapDrop(self,mAP_drop):
