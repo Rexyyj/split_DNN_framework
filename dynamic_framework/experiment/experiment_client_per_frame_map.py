@@ -31,7 +31,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "per_frame_test2"
+test_case = "jpeg_no_change"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -224,7 +224,7 @@ if __name__ == "__main__":
             
             frame_predicts = []
             # thresh = 0.05*(j+1)
-            thresh = 0.3
+            thresh = 0.15
             
             # if __COMPRESSION_TECHNIQUE__ == "jpeg":
             #     quality =60+10*i
@@ -250,17 +250,18 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                if frame_index <30:
-                    # JPEG
-                    quality = 2
-                    technique = 3
-                elif frame_index < 60:
-                    quality = 80
-                    technique = 1
-                else:
-                    quality = 2
-                    technique = 2
-
+                # if frame_index <30:
+                #     # JPEG
+                #     quality = 2
+                #     technique = 3
+                # elif frame_index < 60:
+                #     quality = 80
+                #     technique = 1
+                # else:
+                #     quality = 2
+                #     technique = 2
+                quality = 80
+                technique = 1
                 sf.set_quality(quality)
                 sf.set_compression_technique(technique)
 

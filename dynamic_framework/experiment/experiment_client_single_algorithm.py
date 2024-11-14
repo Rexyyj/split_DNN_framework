@@ -31,7 +31,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_mamager_test"
+test_case = "JPEG_manager_test"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -77,7 +77,10 @@ with open(map_output_path,'a') as f:
     title = ("pruning_thresh,"
             "quality,"
             "technique,"
+            "bandwidth,"
+            "mAP_drop,"
             "frame_id,"
+            "feasible,"
             "sensitivity,"
             "map\n")
     f.write(title)
@@ -86,6 +89,8 @@ with open(time_output_path,'a') as f:
     title = ("pruning_thresh,"
             "quality,"
             "technique,"
+            "bandwidth,"
+            "mAP_drop,"
             "frame_id,"
             "model_head_time,"
             "model_tail_time,"
@@ -102,6 +107,8 @@ with open(characteristic_output_path,'a') as f:
     title = ("pruning_thresh,"
             "quality,"
             "technique,"
+            "bandwidth,"
+            "mAP_drop,"
             "frame_id,"
             "sparsity,"
             "decomposability,"
@@ -109,7 +116,9 @@ with open(characteristic_output_path,'a') as f:
             "pictoriality,"
             "datasize_est,"
             "datasize_real,"
-            "reconstruct_snr\n")
+            "reconstruct_snr,"
+            "target_cmp,"
+            "target_snr\n")
     f.write(title)
 
 
@@ -140,7 +149,7 @@ def print_eval_stats(metrics_output, class_names, verbose):
         print("---- mAP not measured (no detections found by model) ----")
     return precision, recall, AP, f1, ap_class
 
-def write_time_data(sf, thresh,quality,tech,frame_id):
+def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
     model_head_time, model_tail_time = sf.get_model_time_measurement()
     fw_head_time,fw_tail_time,fw_response_time = sf.get_framework_time_measurement()
     compression_time, decompression_time = sf.get_compression_time_measurement()
@@ -153,6 +162,8 @@ def write_time_data(sf, thresh,quality,tech,frame_id):
         f.write(str(thresh)+","
                 +str(quality)+","
                 +str(tech)+","
+                +str(bandwidth)+","
+                +str(mAP_drop)+","
                 +str(frame_id)+","
                 +str(model_head_time)+","
                 +str(model_tail_time)+","
@@ -164,10 +175,12 @@ def write_time_data(sf, thresh,quality,tech,frame_id):
                 +str(overall_time)+"\n"
                 )
         
-def write_characteristic(sf, thresh,quality,tech,frame_id):
+def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
+    quality, thresh = manager.get_configuration()
+    target_cmp, target_snr = manager.get_intermedia_measurements()
 
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
@@ -177,6 +190,8 @@ def write_characteristic(sf, thresh,quality,tech,frame_id):
         f.write(str(thresh)+","
                 +str(quality)+","
                 +str(tech)+","
+                +str(bandwidth)+","
+                +str(mAP_drop)+","
                 +str(frame_id)+","
                 +str(sparsity)+","
                 +str(decomposability)+","
@@ -184,17 +199,22 @@ def write_characteristic(sf, thresh,quality,tech,frame_id):
                 +str(pictoriality)+","
                 +str(datasize_est)+","
                 +str(datasize_real)+","
-                +str(reconstruct_snr)+"\n"
+                +str(reconstruct_snr)+","
+                +str(target_cmp)+","
+                +str(target_snr)+"\n"
                 )
         
-def write_map( thresh,quality,tech,frame_id,sensitivity,map_value):
+def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensitivity,map_value):
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
     with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
                         +str(quality)+","
                         +str(tech)+","
+                        +str(bandwidth)+","
+                        +str(mAP_drop)+","
                         +str(frame_id)+","
+                        +str(feasibility)+","
                         +str(sensitivity)+","
                         +str(map_value)+"\n"
                         )
@@ -224,7 +244,7 @@ if __name__ == "__main__":
             
             frame_predicts = []
             # thresh = 0.05*(j+1)
-            thresh = 0.3
+            # thresh = 0.3
             
             # if __COMPRESSION_TECHNIQUE__ == "jpeg":
             #     quality =60+10*i
@@ -250,11 +270,13 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                available_bandwidth = 1.01*1e7 - frame_index/2*1e5
+                available_bandwidth = 20.01*1e6 - frame_index*1e5
                 mAP_drop = 40
                 technique = 1
-
-                quality, thresh = manager.get_configuration(mAP_drop,available_bandwidth)
+                
+                manager.update_requirements(mAP_drop,available_bandwidth)
+                quality, thresh = manager.get_configuration() 
+                fesiable = manager.get_feasibility()
 
                 sf.set_quality(quality)
                 sf.set_compression_technique(technique) # set to jpeg
@@ -275,8 +297,8 @@ if __name__ == "__main__":
                 targets[:, 2:] *= 416
                 
                 detection = sf.split_framework_client(imgs,service_uri=service_uri)
-                write_time_data(sf,thresh,quality,technique,frame_index)
-                write_characteristic(sf,thresh,quality,technique,frame_index)
+                write_time_data(sf,thresh,quality,technique,available_bandwidth,mAP_drop,frame_index)
+                write_characteristic(sf,manager,technique,available_bandwidth,mAP_drop,frame_index)
                 sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
         
                 # Concatenate sample statistics
@@ -288,7 +310,7 @@ if __name__ == "__main__":
                 sensitivity = np.sum(true_positives) / len(labels)
                 precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
                 ## Save data
-                write_map(thresh,quality,technique,frame_index,sensitivity,AP.mean())
+                write_map(thresh,quality,technique,available_bandwidth,mAP_drop,frame_index,fesiable,sensitivity,AP.mean())
                 
 
                 

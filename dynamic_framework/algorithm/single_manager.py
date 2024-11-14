@@ -48,8 +48,9 @@ class Manager():
 
     def __init__(self):
         self.sample_points, self.cmp_samples, self.snr_samples = self.get_jpeg_samples()
-        self.raw_tensor_size = 128*16*16*4*8 # in bits
+        self.raw_tensor_size = 128*26*26*4*8 # in bits
         self.available_transmission_time = 0.010 # s
+        self.solution_feasiable = 0
         
         # SNR2mAP curve
         coef_map = [-2.15430309e-05,  2.53090430e-03, -1.10683795e-01,  2.17196770e+00, -1.94865597e+01,  1.09932162e+02]
@@ -69,25 +70,35 @@ class Manager():
                 cvtol=1e-6,
                 ftol=1e-6,
                 period=20,
-                n_max_gen=10,
+                n_max_gen=20,
                 n_max_evals=10000
             )
         
-    def get_configuration(self,tolerable_mAP_drop, available_bandwidth): # [%, bps]
+    def get_configuration(self):
+        return self.target_quality, self.target_pruning
+    
+    def get_intermedia_measurements(self):
+        return self.target_cmp,self.target_snr
+    
+    def get_feasibility(self):
+        return self.solution_feasiable
+        
+    def update_requirements(self,tolerable_mAP_drop, available_bandwidth): # [%, bps]
+        available_bandwidth = available_bandwidth*0.6
         self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
         self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop)
-        print(self.target_snr)
-        print(self.target_cmp)
         problem =JPEGProblem(self.target_snr,self.target_cmp,self.sample_points,self.cmp_samples,self.snr_samples)
         result = minimize(problem, self.algorithm, termination=self.termination)
 
         try:
             self.target_quality = result.X[0]
             self.target_pruning = result.X[1]/100
+            self.solution_feasiable = 1
         except:
             self.target_quality = 60
             self.target_pruning =0.35
-        return self.target_quality, self.target_pruning
+            self.solution_feasiable = 0
+        # return self.target_quality, self.target_pruning
 
     def get_snr_from_mapDrop(self,mAP_drop):
         for snr in range(40):
