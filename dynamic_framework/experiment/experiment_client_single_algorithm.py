@@ -31,7 +31,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_manager_test"
+test_case = "JPEG_manager_test_low"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -271,7 +271,7 @@ if __name__ == "__main__":
                 frame_index+=1
 
                 available_bandwidth = 20.01*1e6 - frame_index*1e5
-                mAP_drop = 40
+                mAP_drop = 20
                 technique = 1
                 
                 manager.update_requirements(mAP_drop,available_bandwidth)
