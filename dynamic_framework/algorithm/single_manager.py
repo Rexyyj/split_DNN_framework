@@ -107,6 +107,18 @@ class Manager():
                 return 41-snr
         return 0
 
+
+    def update_sample_points(self, point, cmp, snr):
+        # for i in range(len(self.sample_points)):
+        #     p = self.sample_points[i]
+        #     if p[0]==point[0] and p[1]==point[1]:
+        #         self.cmp_samples[i] = cmp
+        #         self.snr_samples[i] = snr
+        #     else:
+        self.sample_points.append(point)
+        self.cmp_samples.append(cmp)
+        self.snr_samples.append(snr)
+
         
     def get_jpeg_samples(self):
         jpeg_cha = pd.read_csv("/home/rex/gitRepo/split_DNN_framework/stable_tests/measurements/jpeg_snr_cha/characteristic.csv")
@@ -131,7 +143,7 @@ class Manager():
                 cmp_sample_values.append(cha_plot_df["ratio"].mean())
                 snr_sample_values.append(cha_plot_df["reconstruct_snr"].mean())
 
-        return np.array(sample_points), np.array(cmp_sample_values),np.array(snr_sample_values)
+        return sample_points, cmp_sample_values,snr_sample_values
 
 
 

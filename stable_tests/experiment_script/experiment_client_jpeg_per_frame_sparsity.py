@@ -1,15 +1,13 @@
 ################################### setting path ###################################
 import sys
-sys.path.append('../')
 sys.path.append('../../')
 ################################### import libs ###################################
 from  pytorchyolo import  models_split_tiny
 import numpy as np
 import time
 import torch
-import math
 import os
-from split_framework.split_framework_dynamic import SplitFramework
+from split_framework.stable.split_framework_jpeg_sparsity import SplitFramework
 import tqdm
 import numpy as np
 import requests, pickle
@@ -20,7 +18,7 @@ from terminaltables import AsciiTable
 from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, xywh2xyxy
 from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
-from algorithm.single_manager import Manager
+
 ################################### Varialbe init ###################################
 __COMPRESSION_TECHNIQUE__ = "jpeg"
 
@@ -32,7 +30,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_manager_dyanmic3"
+test_case = "jpeg_sparsity2"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -76,22 +74,17 @@ except:
 
 with open(map_output_path,'a') as f:
     title = ("pruning_thresh,"
+             "target_sparsity,"
             "quality,"
-            "technique,"
-            "bandwidth,"
-            "mAP_drop,"
             "frame_id,"
-            "feasible,"
             "sensitivity,"
             "map\n")
     f.write(title)
 
 with open(time_output_path,'a') as f:
     title = ("pruning_thresh,"
+             "target_sparsity,"
             "quality,"
-            "technique,"
-            "bandwidth,"
-            "mAP_drop,"
             "frame_id,"
             "model_head_time,"
             "model_tail_time,"
@@ -106,10 +99,8 @@ with open(time_output_path,'a') as f:
 
 with open(characteristic_output_path,'a') as f:
     title = ("pruning_thresh,"
+             "target_sparsity,"
             "quality,"
-            "technique,"
-            "bandwidth,"
-            "mAP_drop,"
             "frame_id,"
             "sparsity,"
             "decomposability,"
@@ -117,9 +108,8 @@ with open(characteristic_output_path,'a') as f:
             "pictoriality,"
             "datasize_est,"
             "datasize_real,"
-            "reconstruct_snr,"
-            "target_cmp,"
-            "target_snr\n")
+            "reconstruct_evm,"
+            "reconstruct_snr\n")
     f.write(title)
 
 
@@ -150,7 +140,7 @@ def print_eval_stats(metrics_output, class_names, verbose):
         print("---- mAP not measured (no detections found by model) ----")
     return precision, recall, AP, f1, ap_class
 
-def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
+def write_time_data(sf, thresh,sparisty,quality,frame_id):
     model_head_time, model_tail_time = sf.get_model_time_measurement()
     fw_head_time,fw_tail_time,fw_response_time = sf.get_framework_time_measurement()
     compression_time, decompression_time = sf.get_compression_time_measurement()
@@ -161,10 +151,8 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
 
     with open(time_output_path,'a') as f:
         f.write(str(thresh)+","
+                +str(sparisty)+","
                 +str(quality)+","
-                +str(tech)+","
-                +str(bandwidth)+","
-                +str(mAP_drop)+","
                 +str(frame_id)+","
                 +str(model_head_time)+","
                 +str(model_tail_time)+","
@@ -176,12 +164,12 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
                 +str(overall_time)+"\n"
                 )
         
-def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
-    sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
+def write_characteristic(sf, thresh,sparsity,quality,frame_id):
+    sparsity_real, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
-    quality, thresh = manager.get_configuration()
-    target_cmp, target_snr = manager.get_intermedia_measurements()
+    reconstruct_evm = sf.get_reconstruct_evm()
+
 
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
@@ -189,33 +177,27 @@ def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
 
     with open(characteristic_output_path,'a') as f:
         f.write(str(thresh)+","
-                +str(quality)+","
-                +str(tech)+","
-                +str(bandwidth)+","
-                +str(mAP_drop)+","
-                +str(frame_id)+","
                 +str(sparsity)+","
+                +str(quality)+","
+                +str(frame_id)+","
+                +str(sparsity_real)+","
                 +str(decomposability)+","
                 +str(regularity)+","
                 +str(pictoriality)+","
                 +str(datasize_est)+","
                 +str(datasize_real)+","
-                +str(reconstruct_snr)+","
-                +str(target_cmp)+","
-                +str(target_snr)+"\n"
+                +str(reconstruct_evm)+","
+                +str(reconstruct_snr)+"\n"
                 )
         
-def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensitivity,map_value):
+def write_map( thresh,sparsity,quality,frame_id,sensitivity,map_value):
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
     with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
+                        +str(sparsity)+","
                         +str(quality)+","
-                        +str(tech)+","
-                        +str(bandwidth)+","
-                        +str(mAP_drop)+","
                         +str(frame_id)+","
-                        +str(feasibility)+","
                         +str(sensitivity)+","
                         +str(map_value)+"\n"
                         )
@@ -230,8 +212,8 @@ if __name__ == "__main__":
     dataloader = create_data_loader(testdata_path)
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     class_names = load_classes(class_name_path)  # List of class names
-    for j in range(1):
-        for i in range(1):
+    for j in range(9):
+        for i in range(5):
             reset_required = True
             while reset_required:
                 r = requests.post(url=reset_uri)
@@ -245,69 +227,49 @@ if __name__ == "__main__":
             
             frame_predicts = []
             # thresh = 0.05*(j+1)
-            # thresh = 0.3
+            sparsity = 0.9+ 0.01 * (j+1)
             
-            # if __COMPRESSION_TECHNIQUE__ == "jpeg":
-            #     quality =60+10*i
-            # elif __COMPRESSION_TECHNIQUE__ == "regression":
-            #     quality = i+1
-            # elif __COMPRESSION_TECHNIQUE__ =="decomposition":
-            #     quality = (i+1)*2
-            # elif __COMPRESSION_TECHNIQUE__ =="sketchml":
-            #     quality = [256, (i+1)*0.1, (i+1)]
-            # else:
-            #     raise Exception("Unknown compression techique!")
+            if __COMPRESSION_TECHNIQUE__ == "jpeg":
+                quality =60+10*i
+            elif __COMPRESSION_TECHNIQUE__ == "regression":
+                quality = i+1
+            elif __COMPRESSION_TECHNIQUE__ =="decomposition":
+                quality = (i+1)*2
+            elif __COMPRESSION_TECHNIQUE__ =="sketchml":
+                quality = [256, (i+1)*0.1, (i+1)]
+            else:
+                raise Exception("Unknown compression techique!")
             # thresh = 0.0
             # quality =100
-            # print("Testing threshold: ",thresh,", Quality: ",quality)
+            print("Testing sparisty: ",sparsity,", Quality: ",quality)
             sf = SplitFramework(device="cuda", model=model)
             sf.set_reference_tensor(dummy_head_tensor)
-            manager = Manager()
-            
+            sf.set_pruning_sparsity(sparsity)
+            sf.set_quality(quality)
             ################## Init measurement lists ##########################
             # labels = []
             # sample_metrics = []  # List of tuples (TP, confs, pred)
             frame_index = 0
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
-
-                available_bandwidth = 15*1e6 + 10*1e6* math.cos((frame_index/50)*3.14)
-                mAP_drop = 20
-                technique = 1
-                
-                manager.update_requirements(mAP_drop,available_bandwidth)
-                quality, thresh = manager.get_configuration() 
-                fesiable = manager.get_feasibility()
-
-                sf.set_quality(quality)
-                sf.set_compression_technique(technique) # set to jpeg
-                sf.set_pruning_threshold(thresh)
-
                 # Warmup phase
                 imgs = Variable(imgs.type(Tensor), requires_grad=False)
                 if frame_index <= N_warmup:
                     with torch.no_grad():
                         detection=sf.split_framework_client(imgs,service_uri=service_uri)
                         continue
-
+                
                 # Real measurements
                 # Extract labels
                 labels = targets[:, 1].tolist()
                 # Rescale target
                 targets[:, 2:] = xywh2xyxy(targets[:, 2:])
                 targets[:, 2:] *= 416
-
-                try:
-                    data_size,_ = sf.get_data_size()
-                    # print(data_size)
-                    cmp= 128*26*26*4/data_size
-                except:
-                    cmp = 0
-                manager.update_sample_points([thresh,quality],cmp,sf.get_reconstruct_snr())
                 
                 detection = sf.split_framework_client(imgs,service_uri=service_uri)
-                write_time_data(sf,thresh,quality,technique,available_bandwidth,mAP_drop,frame_index)
-                write_characteristic(sf,manager,technique,available_bandwidth,mAP_drop,frame_index)
+                thresh = sf.get_pruning_thresh()
+                write_time_data(sf,thresh,sparsity,quality,frame_index)
+                write_characteristic(sf,thresh,sparsity,quality,frame_index)
                 sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
         
                 # Concatenate sample statistics
@@ -319,7 +281,7 @@ if __name__ == "__main__":
                 sensitivity = np.sum(true_positives) / len(labels)
                 precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
                 ## Save data
-                write_map(thresh,quality,technique,available_bandwidth,mAP_drop,frame_index,fesiable,sensitivity,AP.mean())
-                
+                write_map(thresh,sparsity,quality,frame_index,sensitivity,AP.mean())
+                    
 
                 
