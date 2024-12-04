@@ -58,10 +58,10 @@ class Manager():
         self.curve_sens = np.poly1d(coef_sens)
 
         # interpolation settings
-        self.sample_space =     [[0, 60],   [0,100],    [0.99,60],    [0.99,100]]
-        self.sample_space_snr = [ 1,        35,         1,                 35]
-        self.sample_space_cmp = [ 50,       10,         50,                35]
-        self.history_window_size = 15
+        self.sample_space =     [[0.1, 60],   [0.1,100],    [0.99,60],    [0.99,100],   [0.9,60],   [0.9,100]]
+        self.sample_space_snr = [ 5,        35,         0,                 10,          4,          20]
+        self.sample_space_cmp = [ 48,       5,         80,                 30,          50,         5]
+        self.history_window_size = 5
         self.history_counter =0
         self.history_point=[]
         self.history_snr=[]

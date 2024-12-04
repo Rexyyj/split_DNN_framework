@@ -32,7 +32,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_manager_sparsity3"
+test_case = "JPEG_manager_sparsity"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -282,7 +282,7 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                available_bandwidth = 15*1e6 + 5*1e6* math.cos((frame_index/50)*3.14)
+                available_bandwidth = 15*1e6 + 10*1e6* math.cos((frame_index/50)*3.14)
                 mAP_drop = 40
                 technique = 1
                 
