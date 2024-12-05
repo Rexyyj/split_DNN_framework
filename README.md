@@ -16,6 +16,7 @@ Hello Rex, there are some few additional files in this branch:
 
 ### Testing results:
 
+```
 +-------+--------------+---------+
 | 0     | dog          | 0.15703 |
 | 1     | frisbee      | 0.00000 |
@@ -54,6 +55,7 @@ Hello Rex, there are some few additional files in this branch:
 | 34    | train        | 0.00000 |
 +-------+--------------+---------+
 ---- mAP 0.20496 ----
+```
 
 ## Running the split framework
 Running the split framework require two machines. We should first deploy the DNN tail model on the edge server, and then run the DNN head model on the mobile device. 
