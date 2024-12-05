@@ -1,50 +1,59 @@
 # split_DNN_framework
 
-## branch: football finetuning
+## branch: ImageNet-VidVRD finetuning
 
 -----------------
 
 Hello Rex, there are some few additional files in this branch:
-- pytorchyolo/checkpoints/yolov3_ckpt_300.pth is the finetuned checkpoint
+- download the dataset: https://xdshang.github.io/docs/imagenet-vidvrd.html. Both annotations and video are required.
+- pytorchyolo/checkpoints/vidVRD.pth is the finetuned checkpoint
 - pytorchyolo/config/custom.data describes the structure of the dataset
 - pytorchyolo/config/yolov3-custom.cfg describes the achitecture of the model (same as pytorchyolo/config/yolov3-tiny.cfg)
-- pytorchyolo/data is the preprocess football dataset
-- footballtest.py is the python script to run the test on the foolball dataset. Simply run 'python3 footballtest.py'. All params for testing are set at default.
+- ImageNet-VidVRD/sampleAndLabel.ipynb: this has to be run in order to obtain images from the VidVRD dataset, you will need to change paths to according to your machine
+- to test: poetry run yolo-test --weights checkpoints/yolov3_ckpt_300.pth --model config/yolov3-tiny.cfg --data config/custom.data
 
------------------
-
-### Training results:
----- Training Model ----
-Training Epoch 300: 100%|████████████████████████████████████████████| 33/33 [00:08<00:00,  3.97it/s]
----- Saving checkpoint to: 'checkpoints/yolov3_ckpt_300.pth' ----
-
----- Evaluating Model ----
-Validating: 100%|██████████████████████████████████████████████████████| 6/6 [00:02<00:00,  2.70it/s]
-Computing AP: 100%|███████████████████████████████████████████████████| 4/4 [00:00<00:00, 700.25it/s]
----- mAP 0.31868 ----
-
------------------
+-------------------
 
 ### Testing results:
 
-Environment information:
-System: Linux 6.1.0-21-amd64
-Not using the poetry package
-Current Commit Hash: b139d49
-Command line arguments: Namespace(model='config/yolov3-custom.cfg', weights='checkpoints/yolov3_ckpt_300.pth', data='config/custom.data', batch_size=8, verbose=False, img_size=416, n_cpu=8, iou_thres=0.5, conf_thres=0.01, nms_thres=0.4)
-Validating: 100%|████████████████████████████████████████████████████████████████████████████████████| 22/22 [00:05<00:00,  4.40it/s]
-Computing AP: 100%|███████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 366.29it/s]
-```
-+-------+---------------+---------+
-| Index | Class         | AP      |
-+-------+---------------+---------+
-| 0     | ball          | 0.03723 |
-| 1     | goalkeeper    | 0.11100 |
-| 2     | referee       | 0.53188 |
-| 3     | soccer-player | 0.78219 |
-+-------+---------------+---------+
----- mAP 0.36557 ----
-```
++-------+--------------+---------+
+| 0     | dog          | 0.15703 |
+| 1     | frisbee      | 0.00000 |
+| 2     | bicycle      | 0.51512 |
+| 3     | person       | 0.40603 |
+| 4     | zebra        | 0.51533 |
+| 5     | sofa         | 0.00000 |
+| 6     | motorcycle   | 0.46186 |
+| 7     | car          | 0.24427 |
+| 8     | domestic_cat | 0.00001 |
+| 9     | ball         | 0.00000 |
+| 10    | red_panda    | 0.45264 |
+| 11    | giant_panda  | 0.21266 |
+| 12    | hamster      | 0.35790 |
+| 13    | squirrel     | 0.00000 |
+| 14    | monkey       | 0.07482 |
+| 15    | snake        | 0.27165 |
+| 16    | cattle       | 0.44699 |
+| 17    | antelope     | 0.51726 |
+| 18    | sheep        | 0.00069 |
+| 19    | turtle       | 0.00000 |
+| 20    | elephant     | 0.24961 |
+| 21    | horse        | 0.44905 |
+| 22    | bird         | 0.03521 |
+| 23    | bear         | 0.19446 |
+| 24    | fox          | 0.27784 |
+| 25    | airplane     | 0.66711 |
+| 26    | tiger        | 0.00000 |
+| 27    | watercraft   | 0.51814 |
+| 28    | rabbit       | 0.00000 |
+| 29    | lizard       | 0.00000 |
+| 30    | whale        | 0.13179 |
+| 31    | lion         | 0.01535 |
+| 32    | bus          | 0.00000 |
+| 33    | skateboard   | 0.00093 |
+| 34    | train        | 0.00000 |
++-------+--------------+---------+
+---- mAP 0.20496 ----
 
 ## Running the split framework
 Running the split framework require two machines. We should first deploy the DNN tail model on the edge server, and then run the DNN head model on the mobile device. 
