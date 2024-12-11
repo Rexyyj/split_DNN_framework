@@ -2,8 +2,8 @@
 import os
 
 
-test_file  = "./test_5_fps.txt"
-cleaned_file = "./test_5_fps_cleaned.txt"
+test_file  = "./test_30_fps_long.txt"
+cleaned_file = "./test_30_fps_long_cleaned.txt"
 
 
 with open(test_file,"r") as f:
