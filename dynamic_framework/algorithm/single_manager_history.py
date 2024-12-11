@@ -20,16 +20,16 @@ class JPEGProblem(ElementwiseProblem):
         self.sample_points = sample_points
         self.cmp_samples = cmp_samples
         self.snr_samples = snr_samples
-        super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[60,5], xu=[100,35],vtype=int)
+        super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100],vtype=int)
 
     def interpolated_constraint_cmp(self,xy):
-        return griddata(self.sample_points, self.cmp_samples, (xy[0], xy[1]/100), method='cubic')
+        return griddata(self.sample_points, self.cmp_samples, (xy[0]/100, xy[1]), method='cubic')
 
     def interpolated_constraint_snr(self,xy):
-        return griddata(self.sample_points, self.cmp_samples, (xy[0], xy[1]/100), method='cubic')
+        return griddata(self.sample_points, self.cmp_samples, (xy[0]/100, xy[1]), method='cubic')
 
     def _evaluate(self, x, out, *args, **kwargs):
-        out["F"] = x[1]/35-x[0]/100
+        out["F"] = x[0]/35-(x[1]-50)/50
 
         constraint_1 = self.cmp-self.interpolated_constraint_cmp(x)
         constraint_2 = self.snr-self.interpolated_constraint_snr(x)
@@ -47,7 +47,18 @@ class JPEGProblem(ElementwiseProblem):
 class Manager():
 
     def __init__(self):
-        self.sample_points, self.cmp_samples, self.snr_samples = self.get_jpeg_samples()
+        self.cmp_samples={}
+        self.snr_samples={}
+        self.test_pruning = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.35]
+        self.test_quality = [100, 90, 80, 70, 60, 50]
+        self.test_points=[]
+        self.window_size= 3
+        self.test_counter = 0
+        for n in range(self.window_size):
+            for p in self.test_pruning:
+                for q in self.test_quality:
+                    self.test_points.append((p,q))
+
         self.raw_tensor_size = 128*26*26*4*8 # in bits
         self.available_transmission_time = 0.010 # s
         self.solution_feasiable = 0
@@ -75,7 +86,12 @@ class Manager():
             )
         
     def get_configuration(self):
-        return self.target_quality, self.target_pruning
+        
+        if self.test_counter < len(self.test_points):
+            config = self.test_points[self.test_counter-1]
+            return config[0], config[1]
+        else:
+            return  self.target_pruning,self.target_quality
     
     def get_intermedia_measurements(self):
         return self.target_cmp,self.target_snr
@@ -84,20 +100,31 @@ class Manager():
         return self.solution_feasiable
         
     def update_requirements(self,tolerable_mAP_drop, available_bandwidth): # [%, bps]
-        available_bandwidth = available_bandwidth*0.6
+        available_bandwidth = available_bandwidth*0.5
         self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
         self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop)
-        problem =JPEGProblem(self.target_snr,self.target_cmp,self.sample_points,self.cmp_samples,self.snr_samples)
-        result = minimize(problem, self.algorithm, termination=self.termination)
 
-        try:
-            self.target_quality = result.X[0]
-            self.target_pruning = result.X[1]/100
-            self.solution_feasiable = 1
-        except:
-            self.target_quality = 60
-            self.target_pruning =0.35
-            self.solution_feasiable = 0
+        self.test_counter+=1
+        # Define optimization problem
+        if self.test_counter >= len(self.test_points):
+            s_points = list(self.snr_samples.keys())
+            s_snrs = np.mean(np.array(list(self.snr_samples.values())),axis=1)
+            s_cmps = np.min(np.array(list(self.cmp_samples.values())),axis=1)
+            problem =JPEGProblem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs)
+            result = minimize(problem, self.algorithm, termination=self.termination)
+
+            try:
+                self.target_pruning = result.X[0]/100
+                self.target_quality = result.X[1]
+                self.solution_feasiable = 1
+            except:
+                self.target_quality = 60
+                self.target_pruning =0.35
+                self.solution_feasiable = 0
+        else:
+            self.target_quality = -1
+            self.target_pruning =-1
+            self.solution_feasiable = -1
         # return self.target_quality, self.target_pruning
 
     def get_snr_from_mapDrop(self,mAP_drop):
@@ -109,41 +136,23 @@ class Manager():
 
 
     def update_sample_points(self, point, cmp, snr):
-        # for i in range(len(self.sample_points)):
-        #     p = self.sample_points[i]
-        #     if p[0]==point[0] and p[1]==point[1]:
-        #         self.cmp_samples[i] = cmp
-        #         self.snr_samples[i] = snr
-        #     else:
-        self.sample_points.append(point)
-        self.cmp_samples.append(cmp)
-        self.snr_samples.append(snr)
+        try:
+            snrs = self.snr_samples[point]
+            snrs = np.roll(snrs,1)
+            snrs[0] = snr
+            self.snr_samples[point] = snrs
+
+            cmps = self.cmp_samples[point]
+            cmps = np.roll(cmps,1)
+            cmps[0] = cmp
+            self.cmp_samples[point] = cmps
+        except:
+            self.snr_samples[point] = np.ones(self.window_size)*snr
+            self.cmp_samples[point] = np.ones(self.window_size)* cmp
+
 
         
-    def get_jpeg_samples(self):
-        jpeg_cha = pd.read_csv("/home/rex/gitRepo/split_DNN_framework/stable_tests/measurements/jpeg_snr_cha/characteristic.csv")
-        jpeg_cha = jpeg_cha[jpeg_cha["sparsity"]>0]
-        jpeg_cha = jpeg_cha[jpeg_cha["datasize_est"]>0]
-        tensor_size = 128*26*26 *4
-        jpeg_cha["ratio"] = tensor_size/jpeg_cha["datasize_est"]
-        pruning = [0.05, 0.1, 0.15, 0.2, 0.25,0.3,0.35]
-        quality = [60,70,80,90,100]
 
-        sample_points=[]
-        cmp_sample_values = []
-        snr_sample_values = []
-
-        cha_df_group =jpeg_cha.groupby("pruning_thresh")
-        for p in pruning:
-            cha_df = cha_df_group.get_group(p)
-            cha_quality_df = cha_df.groupby("quality")
-            for q in quality:
-                cha_plot_df= cha_quality_df.get_group(q)
-                sample_points.append([q,p])
-                cmp_sample_values.append(cha_plot_df["ratio"].mean())
-                snr_sample_values.append(cha_plot_df["reconstruct_snr"].mean())
-
-        return sample_points, cmp_sample_values,snr_sample_values
 
 
 

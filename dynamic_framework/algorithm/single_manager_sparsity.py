@@ -29,7 +29,7 @@ class JPEGProblem(ElementwiseProblem):
         return griddata(self.sample_points, self.cmp_samples, (xy[0]/100, xy[1]), method='linear')
 
     def _evaluate(self, x, out, *args, **kwargs):
-        out["F"] = x[0]-x[1]/100
+        out["F"] = x[0]/100-x[1]/100
 
         constraint_1 = self.cmp-self.interpolated_constraint_cmp(x)
         constraint_2 = self.snr-self.interpolated_constraint_snr(x)

@@ -380,6 +380,8 @@ class SplitFramework():
             self._pictoriality =-1
             self._regularity = -1
             self._reconstruct_snr = -1
+            r = requests.post(url="http://10.0.1.34:8092/reset")
+            self.reference_tensor = torch.zeros( self.tensor_shape, dtype=torch.float32).to(self.device)
             return []
 
     def split_framework_service(self, compressed_data):
