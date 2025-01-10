@@ -2,3 +2,4 @@
 *.74
 __pycache__/
 *.pt
+pytorchyolo/data/vidvrd/
