@@ -26,10 +26,12 @@ __COMPRESSION_TECHNIQUE__ = "jpeg"
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
-testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
+# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 # testdata_path = "../../St_Marc_dataset/data/test_0.txt"
-class_name_path = "../../St_Marc_dataset/data/coco.names"
-log_dir = "../measurements/"
+# class_name_path = "../../St_Marc_dataset/data/coco.names"
+testdata_path = "../../pytorchyolo/data/vidvrd/test3.txt"
+class_name_path = "../../pytorchyolo/data/vidvrd/classes.names"
+log_dir = "../measurements_vidvrd/"
 
 test_case = "local"
 service_uri = "http://10.0.1.34:8092/tensor"
@@ -202,7 +204,7 @@ def write_map( thresh,quality,tech,frame_id,sensitivity,map_value):
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model("../ckpt/vidVRD.cfg","../ckpt/vidVRD.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
@@ -242,6 +244,7 @@ if __name__ == "__main__":
                     inference_result = model(head_tensor,2)
                     detection = non_max_suppression(inference_result, 0.01, 0.5)
                     sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
+                    print(detection)
         
                 # Concatenate sample statistics
                 true_positives, pred_scores, pred_labels = [
