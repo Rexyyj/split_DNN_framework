@@ -29,7 +29,7 @@ split_layer= int(sys.argv[1])
 # testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 # testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
-testdata_path = "../../pytorchyolo/data/vidvrd/test3.txt"
+testdata_path = "../../pytorchyolo/data/vidvrd/test_cleaned.txt"
 class_name_path = "../../pytorchyolo/data/vidvrd/classes.names"
 log_dir = "../measurements_vidvrd/"
 
