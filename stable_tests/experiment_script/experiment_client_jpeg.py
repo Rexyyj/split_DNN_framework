@@ -25,12 +25,14 @@ __COMPRESSION_TECHNIQUE__ = "jpeg"
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
-testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
-# testdata_path = "../../St_Marc_dataset/data/test_0.txt"
-class_name_path = "../../St_Marc_dataset/data/coco.names"
-log_dir = "../measurements/"
+# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
+# # testdata_path = "../../St_Marc_dataset/data/test_0.txt"
+# class_name_path = "../../St_Marc_dataset/data/coco.names"
+testdata_path = "../../pytorchyolo/data/vidvrd/test_cleaned.txt"
+class_name_path = "../../pytorchyolo/data/vidvrd/classes.names"
+log_dir = "../measurements_vidvrd/"
 
-test_case = "jpeg_sens_2"
+test_case = "jpeg"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -193,14 +195,15 @@ def write_map( thresh,quality,sensitivity,map_value):
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
+    # model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model("../ckpt/vidVRD.cfg","../ckpt/vidVRD.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
     dataloader = create_data_loader(testdata_path)
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     class_names = load_classes(class_name_path)  # List of class names
-    for j in range(2):
+    for j in range(8):
         for i in range(5):
             reset_required = True
             while reset_required:
@@ -214,8 +217,8 @@ if __name__ == "__main__":
 
             
             frame_predicts = []
-            # thresh = 0.05*(j+1)
-            thresh = 0.05*(j+1)+0.25
+            thresh = 0.05*j
+            # thresh = 0.05*(j+1)+0.25
             
             if __COMPRESSION_TECHNIQUE__ == "jpeg":
                 quality =60+10*i
