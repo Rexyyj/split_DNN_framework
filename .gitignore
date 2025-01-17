@@ -2,4 +2,5 @@
 *.74
 __pycache__/
 *.pt
-pytorchyolo/data/vidvrd/
+pytorchyolo/data/vidvrd/images/
+pytorchyolo/data/vidvrd/labels/

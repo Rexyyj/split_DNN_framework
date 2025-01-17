@@ -30,7 +30,7 @@ split_layer= int(sys.argv[1])
 # # testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
 # log_dir = "../measurements/"
-testdata_path = "../../pytorchyolo/data/vidvrd/test3.txt"
+testdata_path = "../../pytorchyolo/data/vidvrd/test_sorted_short.txt"
 class_name_path = "../../pytorchyolo/data/vidvrd/classes.names"
 log_dir = "../measurements_vidvrd/"
 
@@ -297,6 +297,7 @@ if __name__ == "__main__":
                 precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
                 ## Save data
                 write_map(thresh,quality,technique,frame_index,sensitivity,AP.mean())
+                time.sleep(0.1)
                 
 
                 

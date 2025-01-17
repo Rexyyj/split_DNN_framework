@@ -244,7 +244,7 @@ if __name__ == "__main__":
                     inference_result = model(head_tensor,2)
                     detection = non_max_suppression(inference_result, 0.01, 0.5)
                     sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
-                    print(detection)
+                    # print(detection)
         
                 # Concatenate sample statistics
                 true_positives, pred_scores, pred_labels = [
