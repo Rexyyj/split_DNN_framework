@@ -100,7 +100,7 @@ class SplitFramework():
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
-
+        self._sparsity = calculate_sparsity(pruned_tensor[0].cpu().numpy())
         if __COLLECT_TENSOR_CHARACTERISTIC__:
             try:
                 self._sparsity = calculate_sparsity(pruned_tensor[0].cpu().numpy())
