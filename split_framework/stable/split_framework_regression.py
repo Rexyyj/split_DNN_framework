@@ -9,7 +9,7 @@ import requests
 from split_framework.stable.tools import *
 from pytorchyolo.utils.utils import non_max_suppression
 ################################### Define version ###################################
-__COLLECT_TENSOR_CHARACTERISTIC__ = True
+__COLLECT_TENSOR_CHARACTERISTIC__ = False
 __COLLECT_TENSOR_RECONSTRUCT__ = True
 __COLLECT_FRAMEWORK_TIME__ = True
 __COLLECT_OVERALL_TIME__ = True
@@ -114,7 +114,7 @@ class SplitFramework():
             diff_tensor_normal = torch.nn.functional.normalize(diff_tensor)
             pruned_tensor = diff_tensor*(abs(diff_tensor_normal) > self.pruning_threshold)
             # Framework Head #
-
+        self._sparsity = calculate_sparsity(pruned_tensor[0].cpu().numpy())
         if __COLLECT_TENSOR_CHARACTERISTIC__:
             try:
                 self._sparsity = calculate_sparsity(pruned_tensor[0].cpu().numpy())

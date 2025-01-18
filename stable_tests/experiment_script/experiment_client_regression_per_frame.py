@@ -30,11 +30,11 @@ split_layer= int(sys.argv[1])
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
 # log_dir = "../measurements/"
 
-testdata_path = "../../pytorchyolo/data/vidvrd/test_cleaned.txt"
+testdata_path = "../../pytorchyolo/data/vidvrd/test_small.txt"
 class_name_path = "../../pytorchyolo/data/vidvrd/classes.names"
 log_dir = "../measurements_vidvrd/"
 
-test_case = "regression"
+test_case = "regression_small"
 service_uri = "http://10.0.1.34:8093/tensor"
 reset_uri = "http://10.0.1.34:8093/reset"
 
