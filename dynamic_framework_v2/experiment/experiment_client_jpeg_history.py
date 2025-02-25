@@ -9,7 +9,7 @@ import time
 import torch
 import math
 import os
-from split_framework_v2.split_framework_dynamic import SplitFramework
+from split_framework.split_framework_dynamic import SplitFramework
 import tqdm
 import numpy as np
 import requests, pickle
@@ -20,7 +20,7 @@ from terminaltables import AsciiTable
 from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, xywh2xyxy
 from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
-from algorithm.single_manager_history import Manager
+from algorithm.manager import Manager
 ################################### Varialbe init ###################################
 __COMPRESSION_TECHNIQUE__ = "jpeg"
 
@@ -180,7 +180,7 @@ def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
-    quality, thresh = manager.get_configuration()
+    thresh, quality = manager.get_configuration()
     target_cmp, target_snr = manager.get_intermedia_measurements()
 
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
@@ -253,7 +253,7 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                available_bandwidth = 20*1e6 + 15*1e6* math.cos((frame_index/50)*3.14)
+                available_bandwidth = 30*1e6 + 25*1e6* math.cos((frame_index/50)*3.14)
                 mAP_drop = 40
                 technique = 1
                 
