@@ -9,7 +9,7 @@ import time
 import torch
 import math
 import os
-from split_framework.split_framework_dynamic import SplitFramework
+from split_framework_v2.split_framework_dynamic import SplitFramework
 import tqdm
 import numpy as np
 import requests, pickle
@@ -32,7 +32,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_manager_history5"
+test_case = "JPEG_manager_test"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
