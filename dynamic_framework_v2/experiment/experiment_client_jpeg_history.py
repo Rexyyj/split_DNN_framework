@@ -21,6 +21,7 @@ from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statis
 from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from algorithm.manager import Manager
+from split_framework.gnb import GNB
 ################################### Varialbe init ###################################
 __COMPRESSION_TECHNIQUE__ = "jpeg"
 
@@ -32,7 +33,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_manager_test_new_curve"
+test_case = "JPEG_manager_user_2"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -255,6 +256,30 @@ def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensi
                         +str(map_value)+"\n"
                         )
 ################################### Main function ###################################
+# User movement
+user_loc = [0,0]
+user_speed = [0.3,0,3]
+user_dir = 1
+bs_loc = [5.2,5.3]
+gnb = GNB()
+def update_user_loc_and_get_bw():
+    global user_dir, user_loc, user_speed,bs_loc
+    if user_dir == 1:
+        user_loc[0] += user_speed[0]
+        user_loc[1] += user_speed[1]
+        if user_loc[0] >10 or user_loc[1]>10:
+            user_dir = -1
+    else:
+        user_loc[0] -= user_speed[0]
+        user_loc[1] -= user_speed[1]
+        if user_loc[0]<0 or user_loc[1]<0:
+            user_dir = 1
+    dist = math.dist(user_loc, bs_loc)
+    cqi = round(15 * (8-dist)/8)
+    bw = gnb.estimate_throughput_cqi(cqi)/3
+    return bw
+
+##################################################################################
 
 if __name__ == "__main__":
     # Load Model
@@ -288,8 +313,9 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                available_bandwidth = 60*1e6 + 15*1e6* math.cos((frame_index/50)*3.14)
-                mAP_drop =0.2
+                # available_bandwidth = 60*1e6 + 15*1e6* math.cos((frame_index/50)*3.14)
+                available_bandwidth = update_user_loc_and_get_bw()
+                mAP_drop =0.25
                 technique = 1
                 
                 manager.update_requirements(mAP_drop,available_bandwidth)

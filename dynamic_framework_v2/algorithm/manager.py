@@ -23,28 +23,22 @@ class JPEGProblem(ElementwiseProblem):
         super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100],vtype=int)
         # super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100])
 
-    def interpolated_constraint_cmp(self,xy):
+    def interpolated_cmp(self,xy):
         return griddata(self.sample_points, self.cmp_samples, (float(xy[0])/100, xy[1]), method='linear')
 
-    def interpolated_constraint_snr(self,xy):
+    def interpolated_snr(self,xy):
         return griddata(self.sample_points, self.snr_samples, (float(xy[0])/100, xy[1]), method='linear')
 
     def _evaluate(self, x, out, *args, **kwargs):
-        obj = -self.interpolated_constraint_cmp(x)
+        obj = -self.interpolated_cmp(x)
 
-        constraint_1 = self.cmp - self.interpolated_constraint_cmp(x)
-        constraint_2 = self.snr - self.interpolated_constraint_snr(x) 
-
+        constraint_1 = self.cmp - self.interpolated_cmp(x)
+        constraint_2 = self.snr - self.interpolated_snr(x) 
 
         penalty1 = 1e6 * max(0, constraint_1)  # Large penalty for violation
         penalty2 = 1e6 * max(0, constraint_2)  # Large penalty for violation
 
         out["F"] = obj +penalty1+penalty2
-        # if constraint_1 > 0 :  # If constraint is violated
-        #     out["F"] += penalty * constraint_1 
-
-        # if constraint_2 > 0:  # If constraint is violated
-        #     out["F"] +=self.interpolated_constraint_snr(x) /40
 
         out["G"] = np.array([
             constraint_1,constraint_2
@@ -151,14 +145,15 @@ class Manager():
             
 
             try:
+                print(result.X[0])
                 self.target_pruning = result.X[0]/100
                 self.target_quality = result.X[1]
                 self.solution_feasiable = 1
                 self.manager_cmp= griddata(s_points, s_cmps, ( result.X[0]/100,  result.X[1]), method='linear')
                 self.manager_snr= griddata(s_points, s_snrs, ( result.X[0]/100,  result.X[1]), method='linear')
             except:
-                self.target_quality = 70
-                self.target_pruning =0.1
+                # self.target_quality = 70
+                # self.target_pruning =0.1
                 self.solution_feasiable = 0
         else:
             self.target_quality = -1
