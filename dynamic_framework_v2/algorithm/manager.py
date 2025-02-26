@@ -64,6 +64,8 @@ class Manager():
 
         self.manager_cmp =-1
         self.manager_snr = -1
+        self.target_cmp =-1
+        self.target_snr = -1
         for n in range(self.window_size):
             for p in self.test_pruning:
                 for q in self.test_quality:
@@ -74,10 +76,8 @@ class Manager():
         self.solution_feasiable = 0
         
         # ToDo: update drop curve
-        coef_map = [-2.15430309e-05,  2.53090430e-03, -1.10683795e-01,  2.17196770e+00, -1.94865597e+01,  1.09932162e+02]
-        coef_sens = [-3.37021127e-05,  3.59472798e-03, -1.40599955e-01,  2.46219543e+00,-2.03229254e+01,  1.13382156e+02]
-        self.curve_map = np.poly1d(coef_map)
-        self.curve_sens = np.poly1d(coef_sens)
+        self.map_curve = [0.059, 0.546, 2]
+        self.snr_curve = [0.064, 0.622, 2]
         
         # Algorithm configurations
         # self.algorithm = GA(pop_size=20)
@@ -112,6 +112,18 @@ class Manager():
     
     def get_target_quality(self):
         return self.target_quality
+    
+    def get_target_cmp(self):
+        return self.target_cmp
+    
+    def get_target_snr(self):
+        return self.target_snr
+    
+    def get_est_cmp(self):
+        return self.manager_cmp
+
+    def get_est_snr(self):
+        return self.manager_snr
     
     def get_intermedia_measurements(self):
         return self.manager_cmp,self.manager_snr
@@ -155,12 +167,19 @@ class Manager():
         # return self.target_quality, self.target_pruning
 
     def get_snr_from_mapDrop(self,mAP_drop):
-        for snr in range(40):
-            drop = self.curve_map([40-snr])
-            if drop[0]>mAP_drop:
-                return 41-snr
+        # map_snr = 0
+        # sen_snr = 0
+        for snr in range(50):
+            drop = self.get_drop_from_snr(50-snr, self.map_curve[0],self.map_curve[1],self.map_curve[2])
+            if drop>mAP_drop:
+                return 51-snr
         return 0
 
+    def get_drop_from_snr(self, snr, k, h, b):
+        if snr<b:
+            return 1
+        else:
+            return h* (np.e **(-k*snr))
 
     def update_sample_points(self, point, cmp, snr):
         try:

@@ -32,7 +32,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "JPEG_manager_test"
+test_case = "JPEG_manager_test_new_curve"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -40,6 +40,7 @@ measurement_path = log_dir+test_case+"/"
 map_output_path = measurement_path+ "map.csv"
 time_output_path = measurement_path+ "time.csv"
 characteristic_output_path = measurement_path+ "characteristic.csv"
+manager_output_path = measurement_path + "manager.csv"
 
 # Note: model split layer should -1 for the actual split point
 if split_layer==8:
@@ -73,6 +74,21 @@ except:
     os.system("rm -rf "+measurement_path)
     os.system("mkdir -p "+measurement_path)
         
+with open(manager_output_path,"a") as f:
+    title= (
+        "frame_id,"
+        "bandwidth,"
+        "mAP_drop,"
+        "technique,"
+        "feasibility,"
+        "target_cmp,"
+        "target_snr,"
+        "est_cmp,"
+        "est_snr,"
+        "pruning_thresh,"
+        "quality\n"
+    )
+    f.write(title)
 
 with open(map_output_path,'a') as f:
     title = ("pruning_thresh,"
@@ -150,6 +166,23 @@ def print_eval_stats(metrics_output, class_names, verbose):
     else:
         print("---- mAP not measured (no detections found by model) ----")
     return precision, recall, AP, f1, ap_class
+
+def write_manager_data(frame_id, bandwidth, mAP_drop, manager):
+
+    with open(manager_output_path,"a") as f:
+        f.write(
+            str(frame_id)+","
+            +str(bandwidth)+","
+            +str(mAP_drop)+","
+            +str(manager.get_compression_technique())+","
+            +str(manager.get_feasibility())+","
+            +str(manager.get_target_cmp())+","
+            +str(manager.get_target_snr())+","
+            +str(manager.get_est_cmp())+","
+            +str(manager.get_est_snr())+","
+            +str(manager.get_pruning_threshold())+","
+            +str(manager.get_target_quality())+"\n"
+        )
 
 def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
     model_head_time, model_tail_time = sf.get_model_time_measurement()
@@ -256,13 +289,13 @@ if __name__ == "__main__":
                 frame_index+=1
 
                 available_bandwidth = 60*1e6 + 15*1e6* math.cos((frame_index/50)*3.14)
-                mAP_drop = 40
+                mAP_drop =0.2
                 technique = 1
                 
                 manager.update_requirements(mAP_drop,available_bandwidth)
                 thresh, quality = manager.get_configuration() 
                 fesiable = manager.get_feasibility()
-
+                write_manager_data(frame_index,available_bandwidth,mAP_drop, manager)
                 sf.set_quality(quality)
                 sf.set_compression_technique(technique) # set to jpeg
                 sf.set_pruning_threshold(thresh)
