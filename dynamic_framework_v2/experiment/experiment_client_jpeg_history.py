@@ -115,6 +115,7 @@ with open(characteristic_output_path,'a') as f:
             "decomposability,"
             "regularity,"
             "pictoriality,"
+            "compression_ratio,"
             "datasize_est,"
             "datasize_real,"
             "reconstruct_snr,"
@@ -182,7 +183,7 @@ def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
     reconstruct_snr = sf.get_reconstruct_snr()
     thresh, quality = manager.get_configuration()
     target_cmp, target_snr = manager.get_intermedia_measurements()
-
+    cmp_ratio = (128*26*26*4)/datasize_est
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
 
@@ -198,6 +199,7 @@ def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
                 +str(decomposability)+","
                 +str(regularity)+","
                 +str(pictoriality)+","
+                +str(cmp_ratio)+","
                 +str(datasize_est)+","
                 +str(datasize_real)+","
                 +str(reconstruct_snr)+","
@@ -253,7 +255,7 @@ if __name__ == "__main__":
             for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
                 frame_index+=1
 
-                available_bandwidth = 30*1e6 + 25*1e6* math.cos((frame_index/50)*3.14)
+                available_bandwidth = 60*1e6 + 15*1e6* math.cos((frame_index/50)*3.14)
                 mAP_drop = 40
                 technique = 1
                 
@@ -285,6 +287,7 @@ if __name__ == "__main__":
                     cmp= 128*26*26*4/data_size
                 except:
                     cmp = 0
+                    print("Get cmp error")
                 manager.update_sample_points((thresh,quality),cmp,sf.get_reconstruct_snr())
                 
                 detection = sf.split_framework_client(imgs,service_uri=service_uri)

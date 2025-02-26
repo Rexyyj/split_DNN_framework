@@ -21,27 +21,34 @@ class JPEGProblem(ElementwiseProblem):
         self.cmp_samples = cmp_samples
         self.snr_samples = snr_samples
         super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100],vtype=int)
+        # super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100])
 
     def interpolated_constraint_cmp(self,xy):
-        return griddata(self.sample_points, self.cmp_samples, (xy[0]/100, xy[1]), method='cubic')
+        return griddata(self.sample_points, self.cmp_samples, (float(xy[0])/100, xy[1]), method='linear')
 
     def interpolated_constraint_snr(self,xy):
-        return griddata(self.sample_points, self.cmp_samples, (xy[0]/100, xy[1]), method='cubic')
+        return griddata(self.sample_points, self.snr_samples, (float(xy[0])/100, xy[1]), method='linear')
 
     def _evaluate(self, x, out, *args, **kwargs):
-        out["F"] = -self.interpolated_constraint_cmp(x)
+        obj = -self.interpolated_constraint_cmp(x)
 
-        constraint_1 = self.cmp-self.interpolated_constraint_cmp(x)
-        constraint_2 = self.snr-self.interpolated_constraint_snr(x)
+        constraint_1 = self.cmp - self.interpolated_constraint_cmp(x)
+        constraint_2 = self.snr - self.interpolated_constraint_snr(x) 
+
+
+        penalty1 = 1e6 * max(0, constraint_1)  # Large penalty for violation
+        penalty2 = 1e6 * max(0, constraint_2)  # Large penalty for violation
+
+        out["F"] = obj +penalty1+penalty2
+        # if constraint_1 > 0 :  # If constraint is violated
+        #     out["F"] += penalty * constraint_1 
+
+        # if constraint_2 > 0:  # If constraint is violated
+        #     out["F"] +=self.interpolated_constraint_snr(x) /40
 
         out["G"] = np.array([
             constraint_1,constraint_2
         ])
-        penalty = 1000  # Large penalty factor
-        if constraint_1 > 0:  # If constraint is violated
-            out["F"] += penalty * constraint_1
-        if constraint_1 > 0:  # If constraint is violated
-            out["F"] += penalty * constraint_2
 
 
 class Manager():
@@ -49,11 +56,14 @@ class Manager():
     def __init__(self):
         self.cmp_samples={}
         self.snr_samples={}
-        self.test_pruning = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.35]
+        self.test_pruning = [0, 0.05, 0.1, 0.15, 0.2, 0.25]
         self.test_quality = [100, 90, 80, 70, 60, 50]
         self.test_points=[]
         self.window_size= 3
         self.test_counter = 0
+
+        self.manager_cmp =-1
+        self.manager_snr = -1
         for n in range(self.window_size):
             for p in self.test_pruning:
                 for q in self.test_quality:
@@ -70,7 +80,8 @@ class Manager():
         self.curve_sens = np.poly1d(coef_sens)
         
         # Algorithm configurations
-        self.algorithm = GA(pop_size=25,
+        # self.algorithm = GA(pop_size=20)
+        self.algorithm = GA(pop_size=20,
             sampling=IntegerRandomSampling(),
             crossover=SBX(prob=1.0, eta=3.0, vtype=float, repair=RoundingRepair()),
             mutation=PM(prob=1.0, eta=3.0, vtype=float, repair=RoundingRepair()),
@@ -92,9 +103,19 @@ class Manager():
             return config[0], config[1]
         else:
             return  self.target_pruning,self.target_quality
+        
+    def get_compression_technique(self):
+        return 1
+    
+    def get_pruning_threshold(self):
+        return self.target_pruning
+    
+    def get_target_quality(self):
+        return self.target_quality
     
     def get_intermedia_measurements(self):
-        return self.target_cmp,self.target_snr
+        return self.manager_cmp,self.manager_snr
+        # return self.target_cmp,self.target_snr
     
     def get_feasibility(self):
         return self.solution_feasiable
@@ -110,16 +131,22 @@ class Manager():
             s_points = list(self.snr_samples.keys())
             s_snrs = np.mean(np.array(list(self.snr_samples.values())),axis=1)
             s_cmps = np.min(np.array(list(self.cmp_samples.values())),axis=1)
+            print("Target snr, cmp:",self.target_snr,self.target_cmp)
             problem =JPEGProblem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs)
-            result = minimize(problem, self.algorithm, termination=self.termination)
+            result = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+            print(result.G)
+            print("Best solution found: \nX = %s\nF = %s" % (result.X, result.F))
+            
 
             try:
                 self.target_pruning = result.X[0]/100
                 self.target_quality = result.X[1]
                 self.solution_feasiable = 1
+                self.manager_cmp= griddata(s_points, s_cmps, ( result.X[0]/100,  result.X[1]), method='linear')
+                self.manager_snr= griddata(s_points, s_snrs, ( result.X[0]/100,  result.X[1]), method='linear')
             except:
-                self.target_quality = 60
-                self.target_pruning =0.35
+                self.target_quality = 70
+                self.target_pruning =0.1
                 self.solution_feasiable = 0
         else:
             self.target_quality = -1
