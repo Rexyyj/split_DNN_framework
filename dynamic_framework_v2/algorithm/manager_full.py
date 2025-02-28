@@ -129,14 +129,14 @@ class Manager():
     def get_testing_frame_length(self):
         return len(self.test_points)
         
-    def update_requirements(self,tolerable_mAP_drop, available_bandwidth): # [%, bps]
+    def update_requirements(self,tolerable_mAP_drop, available_bandwidth, f_index): # [%, bps]
         available_bandwidth = available_bandwidth*0.5
         self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
         self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop)
 
-        self.test_counter+=1
+        # self.test_counter+=1
         # Define optimization problem
-        if self.test_counter >= len(self.test_points):
+        if f_index >= len(self.test_points):
             s_points = list(self.snr_samples.keys())
             s_snrs = np.mean(np.array(list(self.snr_samples.values())),axis=1)
             s_cmps = np.min(np.array(list(self.cmp_samples.values())),axis=1)
@@ -159,7 +159,7 @@ class Manager():
                 # self.target_pruning =0.1
                 self.solution_feasiable = 0
         else:
-            config = self.test_points[self.test_counter-1]
+            config = self.test_points[f_index-1]
             self.target_quality = config[1]
             self.target_pruning =config[0]
             self.solution_feasiable = -1
