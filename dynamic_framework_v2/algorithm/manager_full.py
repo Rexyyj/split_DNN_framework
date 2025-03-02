@@ -12,15 +12,16 @@ from pymoo.operators.sampling.rnd import IntegerRandomSampling
 from pymoo.optimize import minimize
 from pymoo.termination.default import DefaultSingleObjectiveTermination
 
-class JPEGProblem(ElementwiseProblem):
+class Problem(ElementwiseProblem):
 
-    def __init__(self,snr,cmp,sample_points,cmp_samples,snr_samples):
+    def __init__(self,snr,cmp,sample_points,cmp_samples,snr_samples, lb, ub):
         self.snr = snr
         self.cmp = cmp
         self.sample_points = sample_points
         self.cmp_samples = cmp_samples
         self.snr_samples = snr_samples
-        super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100],vtype=int)
+        super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=lb, xu=ub,vtype=int)
+        # super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100],vtype=int)
         # super().__init__(n_var=2, n_obj=1, n_ieq_constr=2, xl=[0,50], xu=[35,100])
 
     def interpolated_cmp(self,xy):
@@ -48,10 +49,18 @@ class JPEGProblem(ElementwiseProblem):
 class Manager():
 
     def __init__(self):
-        self.cmp_samples={}
-        self.snr_samples={}
+        self.jpeg_cmp_samples={}
+        self.jpeg_snr_samples={}
+        self.decom_cmp_samples={}
+        self.decom_snr_samples={}
+        self.reg_cmp_samples={}
+        self.reg_snr_samples={}
+
         self.test_pruning = [0, 0.05, 0.1, 0.15, 0.2, 0.25]
-        self.test_quality = [100, 90, 80, 70, 60, 50]
+        self.jpeg_quality = [100, 90, 80, 70, 60, 50]
+        self.regression_quality = [1,2,3,4,5]
+        self.decomposition_quality = [1,2,3,4,5]
+
         self.test_points=[]
         self.window_size= 3
         self.test_counter = 0
@@ -60,10 +69,15 @@ class Manager():
         self.manager_snr = -1
         self.target_cmp =-1
         self.target_snr = -1
+        self.target_technique = -1
         for n in range(self.window_size):
             for p in self.test_pruning:
-                for q in self.test_quality:
-                    self.test_points.append((p,q))
+                for q_j in self.jpeg_quality:
+                    self.test_points.append((1,p,q_j))
+                for q_d in self.decomposition_quality:
+                    self.test_points.append((2, p,q_d))
+                for q_r in self.regression_quality:
+                    self.test_points.append((3,p,q_r))
 
         self.raw_tensor_size = 128*26*26*4*8 # in bits
         self.available_transmission_time = 0.010 # s
@@ -71,7 +85,7 @@ class Manager():
         
         # ToDo: update drop curve
         self.map_curve = [0.059, 0.546, 2]
-        self.snr_curve = [0.064, 0.622, 2]
+        self.sen_curve = [0.064, 0.622, 2]
         
         # Algorithm configurations
         # self.algorithm = GA(pop_size=20)
@@ -99,7 +113,7 @@ class Manager():
             return  self.target_pruning,self.target_quality
         
     def get_compression_technique(self):
-        return 1
+        return self.target_technique
     
     def get_pruning_threshold(self):
         return self.target_pruning
@@ -132,22 +146,37 @@ class Manager():
     def update_requirements(self,tolerable_mAP_drop, available_bandwidth, f_index): # [%, bps]
         available_bandwidth = available_bandwidth*0.5
         self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
-        self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop)
+        self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP and sen
 
         # self.test_counter+=1
         # Define optimization problem
         if f_index >= len(self.test_points):
-            s_points = list(self.snr_samples.keys())
-            s_snrs = np.mean(np.array(list(self.snr_samples.values())),axis=1)
-            s_cmps = np.min(np.array(list(self.cmp_samples.values())),axis=1)
-            print("Target snr, cmp:",self.target_snr,self.target_cmp)
-            problem =JPEGProblem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs)
-            result = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
-            print(result.G)
-            print("Best solution found: \nX = %s\nF = %s" % (result.X, result.F))
+            # jpeg optimization
+            s_points = list(self.jpeg_snr_samples.keys())
+            s_snrs = np.mean(np.array(list(self.jpeg_snr_samples.values())),axis=1)
+            s_cmps = np.min(np.array(list(self.jpeg_cmp_samples.values())),axis=1)
+            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,50],[35, 100])
+            result_jpeg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+            # decomposition optimization
+            s_points = list(self.decom_snr_samples.keys())
+            s_snrs = np.mean(np.array(list(self.decom_snr_samples.values())),axis=1)
+            s_cmps = np.min(np.array(list(self.decom_cmp_samples.values())),axis=1)
+            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
+            result_decom = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+            # Regression optimization
+            s_points = list(self.reg_snr_samples.keys())
+            s_snrs = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
+            s_cmps = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
+            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,50],[35, 100])
+            result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
             
 
             try:
+                result = result_jpeg
+                if result_decom.F < result.F:
+                    result = result_decom
+                if result_reg.F < result.F:
+                    result = result_reg
                 print(result.X[0])
                 self.target_pruning = result.X[0]/100
                 self.target_quality = result.X[1]
@@ -160,19 +189,28 @@ class Manager():
                 self.solution_feasiable = 0
         else:
             config = self.test_points[f_index-1]
-            self.target_quality = config[1]
-            self.target_pruning =config[0]
+            self.target_technique= config[0]
+            self.target_pruning =config[1]
+            self.target_quality = config[2]
             self.solution_feasiable = -1
         # return self.target_quality, self.target_pruning
 
-    def get_snr_from_mapDrop(self,mAP_drop):
-        # map_snr = 0
-        # sen_snr = 0
+    def get_snr_from_mapDrop(self,mAP_drop, sen_drop):
+        map_snr = 0
+        sen_snr = 0
         for snr in range(50):
             drop = self.get_drop_from_snr(50-snr, self.map_curve[0],self.map_curve[1],self.map_curve[2])
             if drop>mAP_drop:
-                return 51-snr
-        return 0
+                map_snr = 51-snr
+                break
+
+        for snr in range(50):
+            drop = self.get_drop_from_snr(50-snr, self.sen_curve[0],self.sen_curve[1],self.sen_curve[2])
+            if drop>sen_drop:
+                sen_snr = 51-snr
+                break
+        
+        return max(map_snr, sen_snr)
 
     def get_drop_from_snr(self, snr, k, h, b):
         if snr<b:
@@ -180,21 +218,51 @@ class Manager():
         else:
             return h* (np.e **(-k*snr))
 
-    def update_sample_points(self, point, cmp, snr):
-        try:
-            snrs = self.snr_samples[point]
-            snrs = np.roll(snrs,1)
-            snrs[0] = snr
-            self.snr_samples[point] = snrs
+    def update_sample_points(self, tech, point, cmp, snr):
+        if tech ==1:## insert jpeg points
+            try:
+                snrs = self.jpeg_snr_samples[point]
+                snrs = np.roll(snrs,1)
+                snrs[0] = snr
+                self.jpeg_snr_samples[point] = snrs
 
-            cmps = self.cmp_samples[point]
-            cmps = np.roll(cmps,1)
-            cmps[0] = cmp
-            self.cmp_samples[point] = cmps
-        except:
-            self.snr_samples[point] = np.ones(self.window_size)*snr
-            self.cmp_samples[point] = np.ones(self.window_size)* cmp
+                cmps = self.jpeg_cmp_samples[point]
+                cmps = np.roll(cmps,1)
+                cmps[0] = cmp
+                self.jpeg_cmp_samples[point] = cmps
+            except:
+                self.jpeg_snr_samples[point] = np.ones(self.window_size)*snr
+                self.jpeg_cmp_samples[point] = np.ones(self.window_size)* cmp
+        elif tech ==2: ## inset decomposition points
+            try:
+                snrs = self.decom_snr_samples[point]
+                snrs = np.roll(snrs,1)
+                snrs[0] = snr
+                self.decom_snr_samples[point] = snrs
 
+                cmps = self.decom_cmp_samples[point]
+                cmps = np.roll(cmps,1)
+                cmps[0] = cmp
+                self.decom_cmp_samples[point] = cmps
+            except:
+                self.decom_snr_samples[point] = np.ones(self.window_size)*snr
+                self.decom_cmp_samples[point] = np.ones(self.window_size)* cmp
+        elif tech ==3: ## insert regression points
+            try:
+                snrs = self.reg_snr_samples[point]
+                snrs = np.roll(snrs,1)
+                snrs[0] = snr
+                self.reg_snr_samples[point] = snrs
+
+                cmps = self.reg_cmp_samples[point]
+                cmps = np.roll(cmps,1)
+                cmps[0] = cmp
+                self.reg_cmp_samples[point] = cmps
+            except:
+                self.reg_snr_samples[point] = np.ones(self.window_size)*snr
+                self.reg_cmp_samples[point] = np.ones(self.window_size)* cmp
+        else:
+            raise Exception("Unknow sample points")
 
         
 

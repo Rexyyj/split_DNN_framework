@@ -353,7 +353,7 @@ if __name__ == "__main__":
         except:
             cmp = 0
             print("Get cmp error")
-        manager.update_sample_points((manager.get_pruning_threshold(),manager.get_compression_quality()),cmp,sf.get_reconstruct_snr())
+        manager.update_sample_points(manager.get_compression_technique(),(manager.get_pruning_threshold(),manager.get_compression_quality()),cmp,sf.get_reconstruct_snr())
         
         detection = sf.split_framework_client(imgs,service_uri=service_uri)
         write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index)
