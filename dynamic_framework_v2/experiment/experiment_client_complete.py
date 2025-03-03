@@ -23,7 +23,6 @@ from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from algorithm.manager_full import Manager
 from split_framework.gnb import GNB
 ################################### Varialbe init ###################################
-__COMPRESSION_TECHNIQUE__ = "jpeg"
 
 split_layer= int(sys.argv[1])
 
@@ -189,9 +188,6 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
     fw_head_time,fw_tail_time,fw_response_time = sf.get_framework_time_measurement()
     compression_time, decompression_time = sf.get_compression_time_measurement()
     overall_time = sf.get_overall_time_measurement()
-    
-    if __COMPRESSION_TECHNIQUE__ =="sketchml":
-        quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
 
     with open(time_output_path,'a') as f:
         f.write(str(thresh)+","
@@ -210,21 +206,17 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
                 +str(overall_time)+"\n"
                 )
         
-def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
+def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
-    thresh, quality = manager.get_configuration()
     target_cmp, target_snr = manager.get_intermedia_measurements()
     cmp_ratio = (128*26*26*4)/datasize_est
-    if __COMPRESSION_TECHNIQUE__ =="sketchml":
-        quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
-
 
     with open(characteristic_output_path,'a') as f:
-        f.write(str(thresh)+","
-                +str(quality)+","
-                +str(tech)+","
+        f.write(str(manager.get_pruning_threshold())+","
+                +str(manager.get_compression_quality())+","
+                +str(manager.get_compression_technique())+","
                 +str(bandwidth)+","
                 +str(mAP_drop)+","
                 +str(frame_id)+","
@@ -241,8 +233,6 @@ def write_characteristic(sf, manager,tech,bandwidth,mAP_drop,frame_id):
                 )
         
 def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensitivity,map_value):
-    if __COMPRESSION_TECHNIQUE__ =="sketchml":
-        quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
     with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
                         +str(quality)+","
@@ -316,7 +306,7 @@ if __name__ == "__main__":
         # availble bandwith calculation
         available_bandwidth = update_user_loc_and_get_bw()
         mAP_drop =0.25
-        technique = 1
+        # technique = 1
 
         # interframe similarity calculation
 
@@ -357,7 +347,7 @@ if __name__ == "__main__":
         
         detection = sf.split_framework_client(imgs,service_uri=service_uri)
         write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index)
-        write_characteristic(sf,manager,technique,available_bandwidth,mAP_drop,frame_index)
+        write_characteristic(sf,manager,available_bandwidth,mAP_drop,frame_index)
         sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
 
         # Concatenate sample statistics
@@ -372,7 +362,7 @@ if __name__ == "__main__":
             ## Save data
             write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index,fesiable,sensitivity,AP.mean())
         except:
-            write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),technique,available_bandwidth,mAP_drop,frame_index,fesiable,0, 0)
+            write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index,fesiable,0, 0)
 
         
 

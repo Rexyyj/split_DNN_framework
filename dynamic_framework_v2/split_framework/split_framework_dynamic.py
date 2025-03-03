@@ -92,6 +92,7 @@ class SplitFramework():
         return reconstructed_tensor
     
     def compressor_decomposition(self,tensor):
+        tensor = tensor.cpu()
         tl.set_backend('pytorch')
         factors= []
         compressed_size = 0

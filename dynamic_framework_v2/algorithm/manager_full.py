@@ -62,7 +62,7 @@ class Manager():
         self.decomposition_quality = [1,2,3,4,5]
 
         self.test_points=[]
-        self.window_size= 3
+        self.window_size= 2
         self.test_counter = 0
 
         self.manager_cmp =-1
@@ -167,7 +167,7 @@ class Manager():
             s_points = list(self.reg_snr_samples.keys())
             s_snrs = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
             s_cmps = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
-            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,50],[35, 100])
+            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
             result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
             
 
