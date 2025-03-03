@@ -80,7 +80,6 @@ class Manager():
                     self.test_points.append((3,p,q_r))
 
         self.raw_tensor_size = 128*26*26*4*8 # in bits
-        self.available_transmission_time = 0.010 # s
         self.solution_feasiable = 0
         
         # ToDo: update drop curve
@@ -143,50 +142,125 @@ class Manager():
     def get_testing_frame_length(self):
         return len(self.test_points)
         
-    def update_requirements(self,tolerable_mAP_drop, available_bandwidth, f_index): # [%, bps]
+    def update_requirements(self,tolerable_mAP_drop, target_fps,available_bandwidth, f_index): # [%, bps]
         available_bandwidth = available_bandwidth*0.5
-        self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
-        self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP and sen
+        # self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
+        # self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP and sen
 
         # self.test_counter+=1
         # Define optimization problem
         if f_index >= len(self.test_points):
+            
+            jpeg_transmission_time = 1/target_fps - 0.016 - 0.01
+            decom_transmission_time = 1/target_fps - 0.016 - 0.1
+            reg_transmission_time = 1/target_fps - 0.016 - 0.1
             # jpeg optimization
-            s_points = list(self.jpeg_snr_samples.keys())
-            s_snrs = np.mean(np.array(list(self.jpeg_snr_samples.values())),axis=1)
-            s_cmps = np.min(np.array(list(self.jpeg_cmp_samples.values())),axis=1)
-            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,50],[35, 100])
-            result_jpeg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+            if jpeg_transmission_time>0:
+                jpeg_target_cmp = self.raw_tensor_size / (available_bandwidth*jpeg_transmission_time)
+                jpeg_target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP 
+                s_points = list(self.jpeg_snr_samples.keys())
+                s_snrs = np.mean(np.array(list(self.jpeg_snr_samples.values())),axis=1)
+                s_cmps = np.min(np.array(list(self.jpeg_cmp_samples.values())),axis=1)
+                problem =Problem(jpeg_target_snr,jpeg_target_cmp,s_points,s_cmps,s_snrs,[0,50],[35, 100])
+                result_jpeg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                try:
+                    jpeg_manager_cmp= griddata(s_points, s_cmps, ( result_jpeg.X[0]/100,  result_jpeg.X[1]), method='linear')
+                    jpeg_manager_snr= griddata(s_points, s_snrs, ( result_jpeg.X[0]/100,  result_jpeg.X[1]), method='linear')
+                except:
+                    jpeg_manager_cmp=-1
+                    jpeg_manager_snr=-1
+            else:
+                result_jpeg = None
+                jpeg_manager_cmp=-1
+                jpeg_manager_snr=-1
             # decomposition optimization
-            s_points = list(self.decom_snr_samples.keys())
-            s_snrs = np.mean(np.array(list(self.decom_snr_samples.values())),axis=1)
-            s_cmps = np.min(np.array(list(self.decom_cmp_samples.values())),axis=1)
-            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
-            result_decom = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+            if decom_transmission_time>0:
+                decom_target_cmp =  self.raw_tensor_size/ (available_bandwidth*decom_transmission_time)
+                decom_target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop 
+                s_points = list(self.decom_snr_samples.keys())
+                s_snrs = np.mean(np.array(list(self.decom_snr_samples.values())),axis=1)
+                s_cmps = np.min(np.array(list(self.decom_cmp_samples.values())),axis=1)
+                problem =Problem(decom_target_snr,decom_target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
+                result_decom = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                try:
+                    decom_manager_cmp= griddata(s_points, s_cmps, ( result_decom.X[0]/100,  result_decom.X[1]), method='linear')
+                    decom_manager_snr= griddata(s_points, s_snrs, ( result_decom.X[0]/100,  result_decom.X[1]), method='linear')
+                except:
+                    decom_manager_cmp=-1
+                    decom_manager_snr=-1
+            else:
+                result_decom= None
+                decom_manager_cmp=-1
+                decom_manager_snr=-1
             # Regression optimization
-            s_points = list(self.reg_snr_samples.keys())
-            s_snrs = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
-            s_cmps = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
-            problem =Problem(self.target_snr,self.target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
-            result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+            if reg_transmission_time>0:
+                reg_target_cmp =  self.raw_tensor_size/ (available_bandwidth*reg_transmission_time)
+                reg_target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop*0.8,tolerable_mAP_drop*0.8) # use same drop 
+                s_points = list(self.reg_snr_samples.keys())
+                s_snrs = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
+                s_cmps = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
+                problem =Problem(reg_target_snr,reg_target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
+                result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                try:
+                    reg_manager_cmp= griddata(s_points, s_cmps, ( result_reg.X[0]/100,  result_reg.X[1]), method='linear')
+                    reg_manager_snr= griddata(s_points, s_snrs, ( result_reg.X[0]/100,  result_reg.X[1]), method='linear')
+                except:
+                    reg_manager_cmp=-1
+                    reg_manager_snr=-1
+            else:
+                result_reg = None
+                reg_manager_cmp=-1
+                reg_manager_snr=-1
             
 
-            try:
-                result = result_jpeg
-                if result_decom.F < result.F:
-                    result = result_decom
-                if result_reg.F < result.F:
-                    result = result_reg
-                print(result.X[0])
+            result = None
+            if result_jpeg!=None or result_decom!=None or result_reg!=None:
+                self.solution_feasiable = 1
+                if result_jpeg != None:
+                    result = result_jpeg
+                    self.target_cmp = jpeg_target_cmp
+                    self.target_snr = jpeg_target_snr
+                    self.manager_cmp = jpeg_manager_cmp
+                    self.manager_snr =  jpeg_manager_snr
+                    self.target_technique = 1
+                
+                if result_decom!= None:
+                    if result == None:
+                        result = result_decom
+                        self.target_cmp = decom_target_cmp
+                        self.target_snr = decom_target_snr
+                        self.manager_cmp = decom_manager_cmp
+                        self.manager_snr =  decom_manager_snr
+                        self.target_technique=2
+                    elif result_decom.F < result.F:
+                        result = result_decom
+                        self.target_cmp = decom_target_cmp
+                        self.target_snr = decom_target_snr
+                        self.manager_cmp = decom_manager_cmp
+                        self.manager_snr =  decom_manager_snr
+                        self.target_technique=2
+
+                if result_reg!=None:
+                    if result == None:
+                        result = result_reg
+                        self.target_cmp = reg_target_cmp
+                        self.target_snr = reg_target_snr
+                        self.manager_cmp = reg_manager_cmp
+                        self.manager_snr =  reg_manager_snr
+                        self.target_technique= 3
+                    elif result_reg.F< result.F:
+                        result = result_reg
+                        self.target_cmp = reg_target_cmp
+                        self.target_snr = reg_target_snr
+                        self.manager_cmp = reg_manager_cmp
+                        self.manager_snr =  reg_manager_snr
+                        self.target_technique=3
+
                 self.target_pruning = result.X[0]/100
                 self.target_quality = result.X[1]
-                self.solution_feasiable = 1
-                self.manager_cmp= griddata(s_points, s_cmps, ( result.X[0]/100,  result.X[1]), method='linear')
-                self.manager_snr= griddata(s_points, s_snrs, ( result.X[0]/100,  result.X[1]), method='linear')
-            except:
-                # self.target_quality = 70
-                # self.target_pruning =0.1
+            else:
                 self.solution_feasiable = 0
+
         else:
             config = self.test_points[f_index-1]
             self.target_technique= config[0]

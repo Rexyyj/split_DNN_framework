@@ -31,7 +31,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "full_manager_test"
+test_case = "full_manager_test3"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -78,6 +78,7 @@ with open(manager_output_path,"a") as f:
         "frame_id,"
         "bandwidth,"
         "mAP_drop,"
+        "target_fps,"
         "technique,"
         "feasibility,"
         "target_cmp,"
@@ -166,13 +167,14 @@ def print_eval_stats(metrics_output, class_names, verbose):
         print("---- mAP not measured (no detections found by model) ----")
     return precision, recall, AP, f1, ap_class
 
-def write_manager_data(frame_id, bandwidth, mAP_drop, manager):
+def write_manager_data(frame_id, bandwidth, mAP_drop, target_fps,manager):
 
     with open(manager_output_path,"a") as f:
         f.write(
             str(frame_id)+","
             +str(bandwidth)+","
             +str(mAP_drop)+","
+            +str(target_fps)+","
             +str(manager.get_compression_technique())+","
             +str(manager.get_feasibility())+","
             +str(manager.get_target_cmp())+","
@@ -306,19 +308,20 @@ if __name__ == "__main__":
         # availble bandwith calculation
         available_bandwidth = update_user_loc_and_get_bw()
         mAP_drop =0.25
+        target_fps = 5
         # technique = 1
 
         # interframe similarity calculation
 
         # check framework update events and run manager 
         if frame_index< manager.get_testing_frame_length()+1:
-            manager.update_requirements(mAP_drop,available_bandwidth,frame_index)
+            manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,mAP_drop, manager)
+            write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager)
         elif abs(available_bandwidth-previouse_bandwidth)>1e6:
-            manager.update_requirements(mAP_drop,available_bandwidth,frame_index)
+            manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,mAP_drop, manager)
+            write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager)
             previouse_bandwidth = available_bandwidth
         
         # thresh, quality = manager.get_configuration() 
