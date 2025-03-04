@@ -31,7 +31,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "full_manager_test3"
+test_case = "full_manager_test4"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -86,7 +86,10 @@ with open(manager_output_path,"a") as f:
         "est_cmp,"
         "est_snr,"
         "pruning_thresh,"
-        "quality\n"
+        "quality,"
+        "jpeg_F,"
+        "decom_F,"
+        "reg_F\n"
     )
     f.write(title)
 
@@ -182,7 +185,10 @@ def write_manager_data(frame_id, bandwidth, mAP_drop, target_fps,manager):
             +str(manager.get_est_cmp())+","
             +str(manager.get_est_snr())+","
             +str(manager.get_pruning_threshold())+","
-            +str(manager.get_compression_quality())+"\n"
+            +str(manager.get_compression_quality())+","
+            +str(manager.get_result_jpeg_f())+","
+            +str(manager.get_result_decom_f())+","
+            +str(manager.get_result_reg_f())+"\n"
         )
 
 def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
@@ -299,6 +305,7 @@ if __name__ == "__main__":
     manager = Manager()
     
     previouse_bandwidth = 0
+    previouse_snr =0
 
     ################## Init measurement lists ##########################
     frame_index = 0
@@ -307,8 +314,8 @@ if __name__ == "__main__":
 
         # availble bandwith calculation
         available_bandwidth = update_user_loc_and_get_bw()
-        mAP_drop =0.25
-        target_fps = 5
+        mAP_drop =0.30
+        target_fps = 10
         # technique = 1
 
         # interframe similarity calculation
@@ -323,6 +330,12 @@ if __name__ == "__main__":
             fesiable = manager.get_feasibility()
             write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager)
             previouse_bandwidth = available_bandwidth
+        elif (manager.get_target_snr() - previouse_snr) > 0.1:
+            manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
+            fesiable = manager.get_feasibility()
+            write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager)
+            previouse_bandwidth = available_bandwidth
+
         
         # thresh, quality = manager.get_configuration() 
         # set framework configuration
@@ -347,6 +360,7 @@ if __name__ == "__main__":
             cmp = 0
             print("Get cmp error")
         manager.update_sample_points(manager.get_compression_technique(),(manager.get_pruning_threshold(),manager.get_compression_quality()),cmp,sf.get_reconstruct_snr())
+        previouse_snr = sf.get_reconstruct_snr()
         
         detection = sf.split_framework_client(imgs,service_uri=service_uri)
         write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index)

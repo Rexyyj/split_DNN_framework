@@ -27,6 +27,7 @@ class SplitFramework():
         self.tensor_shape = None
         self.pruning_threshold= None
         self.model = model
+        self.reset_uri = "http://10.0.1.34:8092/reset"
 
         # Measurements
         self._datasize_est=None
@@ -46,6 +47,19 @@ class SplitFramework():
         self._pictoriality =-1
         self._regularity = -1
         self._reconstruct_snr = -1
+        
+
+    def reset_reference_tensor(self):
+        r = requests.post(url=self.reset_uri)
+        result = pickle.loads(r.content)
+        if result["reset_status"] == True:
+            reset_required = False
+        else:
+            print("Reset edge reference tensor failed...")
+        
+        self.reference_tensor = torch.zeros( self.tensor_shape, dtype=torch.float32).to(self.device)
+        self.reference_tensor_edge = torch.zeros( self.tensor_shape, dtype=torch.float32).to(self.device)
+
         
     def set_reference_tensor(self, head_tensor):
         self.tensor_shape = head_tensor.shape
@@ -103,8 +117,8 @@ class SplitFramework():
                 try:
                     ft = tl.decomposition.parafac(tensor[i], rank=self.quality)
                     factors.append(ft)
-                    compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])
-                    compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])
+                    compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4 # float in bytes
+                    compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4 # float in bytes
                 except:
                     factors.append(0)
         reconstructed_tensor = self.decompressor_decomposition(tensor.shape, factors)
@@ -253,6 +267,7 @@ class SplitFramework():
         else:
             if self.compression_technique ==1 :
                 normalize_base, scale,zero_point, encoded_data, reconstructed_tensor = self.compressor_jpeg(pruned_tensor)
+                compressed_size = len(encoded_data)
                 payload = {
                     "tech":1,
                     "normal": normalize_base,
@@ -342,7 +357,11 @@ class SplitFramework():
                     self.time_end.record()
                     torch.cuda.synchronize()
                     self._model_head_time = self.time_start.elapsed_time(self.time_end)
-                    data_to_trans = self.split_framework_encode(head_tensor)
+                    try:
+                        data_to_trans = self.split_framework_encode(head_tensor)
+                    except:
+                        self.reset_reference_tensor()
+                        data_to_trans = self.split_framework_encode(head_tensor)
                     self.time_start.record()
                     r = requests.post(url=service_uri, data=data_to_trans)
                     response = pickle.loads(r.content)
@@ -351,7 +370,11 @@ class SplitFramework():
                     self._framework_response_time = self.time_start.elapsed_time(self.time_end)
                 else:
                     head_tensor = self.model(frame_tensor, 1)
-                    data_to_trans = self.split_framework_encode(head_tensor)
+                    try:
+                        data_to_trans = self.split_framework_encode(head_tensor)
+                    except:
+                        self.reset_reference_tensor()
+                        data_to_trans = self.split_framework_encode(head_tensor)
                     r = requests.post(url=service_uri, data=data_to_trans)
                     response = pickle.loads(r.content)
 

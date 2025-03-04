@@ -2,6 +2,7 @@ import numpy as np
 # from pymoo.core.problem import Problem
 from scipy.interpolate import griddata
 import pandas as pd
+import random
 
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import ElementwiseProblem
@@ -56,8 +57,8 @@ class Manager():
         self.reg_cmp_samples={}
         self.reg_snr_samples={}
 
-        self.test_pruning = [0, 0.05, 0.1, 0.15, 0.2, 0.25]
-        self.jpeg_quality = [100, 90, 80, 70, 60, 50]
+        self.test_pruning = [0, 0.05, 0.1, 0.15, 0.2,0.25]
+        self.jpeg_quality = [100, 90, 80, 70, 60]
         self.regression_quality = [1,2,3,4,5]
         self.decomposition_quality = [1,2,3,4,5]
 
@@ -70,14 +71,21 @@ class Manager():
         self.target_cmp =-1
         self.target_snr = -1
         self.target_technique = -1
+
+        self.result_jpeg= None
+        self.result_decom = None
+        self.result_reg = None
+
         for n in range(self.window_size):
             for p in self.test_pruning:
                 for q_j in self.jpeg_quality:
                     self.test_points.append((1,p,q_j))
-                for q_d in self.decomposition_quality:
-                    self.test_points.append((2, p,q_d))
                 for q_r in self.regression_quality:
                     self.test_points.append((3,p,q_r))
+                if p <=0.2:
+                    for q_d in self.decomposition_quality:
+                        self.test_points.append((2, p,q_d))
+        random.shuffle(self.test_points)
 
         self.raw_tensor_size = 128*26*26*4*8 # in bits
         self.solution_feasiable = 0
@@ -141,6 +149,24 @@ class Manager():
     
     def get_testing_frame_length(self):
         return len(self.test_points)
+    
+    def get_result_jpeg_f(self):
+        try:
+            return [self.result_jpeg.X[0]/100,self.result_jpeg.X[1],-self.result_jpeg.F[0] ]
+        except:
+            return [-1,-1,-1]
+    
+    def get_result_decom_f(self):
+        try:
+            return [self.result_decom.X[0]/100,self.result_decom.X[1],-self.result_decom.F[0] ]
+        except:
+            return [-1,-1,-1]
+    
+    def get_result_reg_f(self):
+        try:
+            return [self.result_reg.X[0]/100,self.result_reg.X[1],-self.result_reg.F[0] ]
+        except:
+            return [-1,-1,-1]
         
     def update_requirements(self,tolerable_mAP_drop, target_fps,available_bandwidth, f_index): # [%, bps]
         available_bandwidth = available_bandwidth*0.5
@@ -161,16 +187,16 @@ class Manager():
                 s_points = list(self.jpeg_snr_samples.keys())
                 s_snrs = np.mean(np.array(list(self.jpeg_snr_samples.values())),axis=1)
                 s_cmps = np.min(np.array(list(self.jpeg_cmp_samples.values())),axis=1)
-                problem =Problem(jpeg_target_snr,jpeg_target_cmp,s_points,s_cmps,s_snrs,[0,50],[35, 100])
-                result_jpeg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                problem =Problem(jpeg_target_snr,jpeg_target_cmp,s_points,s_cmps,s_snrs,[0,60],[35, 100])
+                self.result_jpeg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
                 try:
-                    jpeg_manager_cmp= griddata(s_points, s_cmps, ( result_jpeg.X[0]/100,  result_jpeg.X[1]), method='linear')
-                    jpeg_manager_snr= griddata(s_points, s_snrs, ( result_jpeg.X[0]/100,  result_jpeg.X[1]), method='linear')
+                    jpeg_manager_cmp= griddata(s_points, s_cmps, ( self.result_jpeg.X[0]/100,  self.result_jpeg.X[1]), method='linear')
+                    jpeg_manager_snr= griddata(s_points, s_snrs, ( self.result_jpeg.X[0]/100,  self.result_jpeg.X[1]), method='linear')
                 except:
                     jpeg_manager_cmp=-1
                     jpeg_manager_snr=-1
             else:
-                result_jpeg = None
+                self.result_jpeg = None
                 jpeg_manager_cmp=-1
                 jpeg_manager_snr=-1
             # decomposition optimization
@@ -181,15 +207,15 @@ class Manager():
                 s_snrs = np.mean(np.array(list(self.decom_snr_samples.values())),axis=1)
                 s_cmps = np.min(np.array(list(self.decom_cmp_samples.values())),axis=1)
                 problem =Problem(decom_target_snr,decom_target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
-                result_decom = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                self.result_decom = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
                 try:
-                    decom_manager_cmp= griddata(s_points, s_cmps, ( result_decom.X[0]/100,  result_decom.X[1]), method='linear')
-                    decom_manager_snr= griddata(s_points, s_snrs, ( result_decom.X[0]/100,  result_decom.X[1]), method='linear')
+                    decom_manager_cmp= griddata(s_points, s_cmps, ( self.result_decom.X[0]/100,  self.result_decom.X[1]), method='linear')
+                    decom_manager_snr= griddata(s_points, s_snrs, ( self.result_decom.X[0]/100,  self.result_decom.X[1]), method='linear')
                 except:
                     decom_manager_cmp=-1
                     decom_manager_snr=-1
             else:
-                result_decom= None
+                self.result_decom= None
                 decom_manager_cmp=-1
                 decom_manager_snr=-1
             # Regression optimization
@@ -200,56 +226,56 @@ class Manager():
                 s_snrs = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
                 s_cmps = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
                 problem =Problem(reg_target_snr,reg_target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
-                result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                self.result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
                 try:
-                    reg_manager_cmp= griddata(s_points, s_cmps, ( result_reg.X[0]/100,  result_reg.X[1]), method='linear')
-                    reg_manager_snr= griddata(s_points, s_snrs, ( result_reg.X[0]/100,  result_reg.X[1]), method='linear')
+                    reg_manager_cmp= griddata(s_points, s_cmps, ( self.result_reg.X[0]/100,  self.result_reg.X[1]), method='linear')
+                    reg_manager_snr= griddata(s_points, s_snrs, ( self.result_reg.X[0]/100,  self.result_reg.X[1]), method='linear')
                 except:
                     reg_manager_cmp=-1
                     reg_manager_snr=-1
             else:
-                result_reg = None
+                self.result_reg = None
                 reg_manager_cmp=-1
                 reg_manager_snr=-1
             
 
             result = None
-            if result_jpeg!=None or result_decom!=None or result_reg!=None:
+            if self.result_jpeg!=None or self.result_decom!=None or self.result_reg!=None:
                 self.solution_feasiable = 1
-                if result_jpeg != None:
-                    result = result_jpeg
+                if self.result_jpeg != None:
+                    result = self.result_jpeg
                     self.target_cmp = jpeg_target_cmp
                     self.target_snr = jpeg_target_snr
                     self.manager_cmp = jpeg_manager_cmp
                     self.manager_snr =  jpeg_manager_snr
                     self.target_technique = 1
                 
-                if result_decom!= None:
+                if self.result_decom!= None:
                     if result == None:
-                        result = result_decom
+                        result = self.result_decom
                         self.target_cmp = decom_target_cmp
                         self.target_snr = decom_target_snr
                         self.manager_cmp = decom_manager_cmp
                         self.manager_snr =  decom_manager_snr
                         self.target_technique=2
-                    elif result_decom.F < result.F:
-                        result = result_decom
+                    elif self.result_decom.F < result.F:
+                        result = self.result_decom
                         self.target_cmp = decom_target_cmp
                         self.target_snr = decom_target_snr
                         self.manager_cmp = decom_manager_cmp
                         self.manager_snr =  decom_manager_snr
                         self.target_technique=2
 
-                if result_reg!=None:
+                if self.result_reg!=None:
                     if result == None:
-                        result = result_reg
+                        result = self.result_reg
                         self.target_cmp = reg_target_cmp
                         self.target_snr = reg_target_snr
                         self.manager_cmp = reg_manager_cmp
                         self.manager_snr =  reg_manager_snr
                         self.target_technique= 3
-                    elif result_reg.F< result.F:
-                        result = result_reg
+                    elif self.result_reg.F< result.F:
+                        result = self.result_reg
                         self.target_cmp = reg_target_cmp
                         self.target_snr = reg_target_snr
                         self.manager_cmp = reg_manager_cmp
