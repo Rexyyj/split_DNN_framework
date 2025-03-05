@@ -80,11 +80,12 @@ class Manager():
             for p in self.test_pruning:
                 for q_j in self.jpeg_quality:
                     self.test_points.append((1,p,q_j))
-                for q_r in self.regression_quality:
-                    self.test_points.append((3,p,q_r))
                 if p <=0.2:
                     for q_d in self.decomposition_quality:
                         self.test_points.append((2, p,q_d))
+                for q_r in self.regression_quality:
+                    self.test_points.append((3,p,q_r))
+                
         random.shuffle(self.test_points)
 
         self.raw_tensor_size = 128*26*26*4*8 # in bits
