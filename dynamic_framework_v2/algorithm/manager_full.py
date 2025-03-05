@@ -71,6 +71,7 @@ class Manager():
         self.target_cmp =-1
         self.target_snr = -1
         self.target_technique = -1
+        self.target_transmission_time = -1
 
         self.result_jpeg= None
         self.result_decom = None
@@ -169,6 +170,9 @@ class Manager():
         except:
             return "-1/-1/-1"
         
+    def get_transmission_time(self):
+        return self.target_transmission_time
+        
     def update_requirements(self,tolerable_mAP_drop, target_fps,available_bandwidth, f_index): # [%, bps]
         available_bandwidth = available_bandwidth*0.5
         # self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
@@ -247,6 +251,7 @@ class Manager():
                     result = self.result_jpeg
                     self.target_cmp = jpeg_target_cmp
                     self.target_snr = jpeg_target_snr
+                    self.target_transmission_time=jpeg_transmission_time
                     self.manager_cmp = jpeg_manager_cmp
                     self.manager_snr =  jpeg_manager_snr
                     self.target_technique = 1
@@ -256,6 +261,7 @@ class Manager():
                         result = self.result_decom
                         self.target_cmp = decom_target_cmp
                         self.target_snr = decom_target_snr
+                        self.target_transmission_time = decom_transmission_time
                         self.manager_cmp = decom_manager_cmp
                         self.manager_snr =  decom_manager_snr
                         self.target_technique=2
@@ -263,6 +269,7 @@ class Manager():
                         result = self.result_decom
                         self.target_cmp = decom_target_cmp
                         self.target_snr = decom_target_snr
+                        self.target_transmission_time =decom_transmission_time
                         self.manager_cmp = decom_manager_cmp
                         self.manager_snr =  decom_manager_snr
                         self.target_technique=2
@@ -272,6 +279,7 @@ class Manager():
                         result = self.result_reg
                         self.target_cmp = reg_target_cmp
                         self.target_snr = reg_target_snr
+                        self.target_transmission_time = reg_transmission_time
                         self.manager_cmp = reg_manager_cmp
                         self.manager_snr =  reg_manager_snr
                         self.target_technique= 3
@@ -279,6 +287,7 @@ class Manager():
                         result = self.result_reg
                         self.target_cmp = reg_target_cmp
                         self.target_snr = reg_target_snr
+                        self.target_transmission_time=reg_transmission_time
                         self.manager_cmp = reg_manager_cmp
                         self.manager_snr =  reg_manager_snr
                         self.target_technique=3
@@ -293,6 +302,7 @@ class Manager():
             self.target_technique= config[0]
             self.target_pruning =config[1]
             self.target_quality = config[2]
+            self.target_transmission_time=-1
             self.solution_feasiable = -1
         # return self.target_quality, self.target_pruning
 

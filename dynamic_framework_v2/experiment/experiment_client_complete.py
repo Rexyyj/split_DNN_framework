@@ -143,7 +143,8 @@ with open(characteristic_output_path,'a') as f:
             "datasize_real,"
             "reconstruct_snr,"
             "target_cmp,"
-            "target_snr\n")
+            "target_snr,"
+            "consumed_bw\n")
     f.write(title)
 
 
@@ -219,7 +220,7 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
                 +str(overall_time)+"\n"
                 )
         
-def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id):
+def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id, consumed_bw):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
@@ -242,7 +243,8 @@ def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id):
                 +str(datasize_real)+","
                 +str(reconstruct_snr)+","
                 +str(target_cmp)+","
-                +str(target_snr)+"\n"
+                +str(target_snr)+","
+                +str(consumed_bw)+"\n"
                 )
         
 def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensitivity,map_value):
@@ -367,10 +369,15 @@ if __name__ == "__main__":
             print("Get cmp error")
         manager.update_sample_points(manager.get_compression_technique(),(manager.get_pruning_threshold(),manager.get_compression_quality()),cmp,sf.get_reconstruct_snr())
         previouse_snr = sf.get_reconstruct_snr()
+
+        if manager.get_transmission_time()  == -1:
+            consumed_bw =-1
+        else:
+            consumed_bw = sf.get_data_size()[0]*8 / manager.get_transmission_time() # in bps
         
         detection = sf.split_framework_client(imgs,service_uri=service_uri)
         write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index)
-        write_characteristic(sf,manager,available_bandwidth,mAP_drop,frame_index)
+        write_characteristic(sf,manager,available_bandwidth,mAP_drop,frame_index,consumed_bw)
         sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
 
         # Concatenate sample statistics
