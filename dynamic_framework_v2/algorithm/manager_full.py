@@ -152,21 +152,21 @@ class Manager():
     
     def get_result_jpeg_f(self):
         try:
-            return [self.result_jpeg.X[0]/100,self.result_jpeg.X[1],-self.result_jpeg.F[0] ]
+            return str(self.result_jpeg.X[0]/100)+"/"+str(self.result_jpeg.X[1])+"/"+str(-self.result_jpeg.F[0])
         except:
-            return [-1,-1,-1]
+            return "-1/-1/-1"
     
     def get_result_decom_f(self):
         try:
-            return [self.result_decom.X[0]/100,self.result_decom.X[1],-self.result_decom.F[0] ]
+            return str(self.result_decom.X[0]/100)+"/"+str(self.result_decom.X[1])+"/"+str(-self.result_decom.F[0] )
         except:
-            return [-1,-1,-1]
+            return "-1/-1/-1"
     
     def get_result_reg_f(self):
         try:
-            return [self.result_reg.X[0]/100,self.result_reg.X[1],-self.result_reg.F[0] ]
+            return str(self.result_reg.X[0]/100)+"/"+str(self.result_reg.X[1])+"/"+str(-self.result_reg.F[0] )
         except:
-            return [-1,-1,-1]
+            return "-1/-1/-1"
         
     def update_requirements(self,tolerable_mAP_drop, target_fps,available_bandwidth, f_index): # [%, bps]
         available_bandwidth = available_bandwidth*0.5

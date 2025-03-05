@@ -22,6 +22,9 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from algorithm.manager_full import Manager
 from split_framework.gnb import GNB
+
+import warnings
+warnings.filterwarnings("ignore")
 ################################### Varialbe init ###################################
 
 split_layer= int(sys.argv[1])
