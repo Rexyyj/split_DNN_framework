@@ -220,12 +220,12 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
                 +str(overall_time)+"\n"
                 )
         
-def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id, consumed_bw):
+def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id, consumed_bw, cmp_ratio):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
     target_cmp, target_snr = manager.get_intermedia_measurements()
-    cmp_ratio = (128*26*26*4)/datasize_est
+    # cmp_ratio = (128*26*26*4)/datasize_est
 
     with open(characteristic_output_path,'a') as f:
         f.write(str(manager.get_pruning_threshold())+","
@@ -262,7 +262,7 @@ def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensi
 ################################### Main function ###################################
 # User movement
 user_loc = [0,0]
-user_speed = [0.3,0,3]
+user_speed = [0.05,0.05]
 user_dir = 1
 bs_loc = [5.2,5.3]
 gnb = GNB()
@@ -279,8 +279,8 @@ def update_user_loc_and_get_bw():
         if user_loc[0]<0 or user_loc[1]<0:
             user_dir = 1
     dist = math.dist(user_loc, bs_loc)
-    cqi = round(15 * (30-dist)/30)
-    bw = gnb.estimate_throughput_cqi(cqi)/3
+    cqi = round(15 * (8-dist)/8)
+    bw = gnb.estimate_throughput_cqi(cqi)
     return bw
 
 ##################################################################################
@@ -320,8 +320,8 @@ if __name__ == "__main__":
         frame_index+=1
 
         # availble bandwith calculation
-        available_bandwidth = update_user_loc_and_get_bw()/10
-        mAP_drop =0.5
+        available_bandwidth = update_user_loc_and_get_bw()/100
+        mAP_drop =0.3
         target_fps = 5
         # technique = 1
 
@@ -333,7 +333,7 @@ if __name__ == "__main__":
             manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
             write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
-        elif abs(available_bandwidth-previouse_bandwidth)>1e6:
+        elif abs(available_bandwidth-previouse_bandwidth)>1e6*5:
             manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
             write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
@@ -359,14 +359,15 @@ if __name__ == "__main__":
         # Rescale target
         targets[:, 2:] = xywh2xyxy(targets[:, 2:])
         targets[:, 2:] *= 416
+        # run inference
+        detection = sf.split_framework_client(imgs,service_uri=service_uri)
 
-        try:
-            data_size,_ = sf.get_data_size()
-            # print(data_size)
-            cmp= 128*26*26*4/data_size
-        except:
-            cmp = 0
-            print("Get cmp error")
+
+
+        data_size,_ = sf.get_data_size()
+        # print(data_size)
+        cmp= (128*26*26*4)/data_size
+
         manager.update_sample_points(manager.get_compression_technique(),(manager.get_pruning_threshold(),manager.get_compression_quality()),cmp,sf.get_reconstruct_snr())
         previouse_snr = sf.get_reconstruct_snr()
 
@@ -375,9 +376,9 @@ if __name__ == "__main__":
         else:
             consumed_bw = sf.get_data_size()[0]*8 / manager.get_transmission_time() # in bps
         
-        detection = sf.split_framework_client(imgs,service_uri=service_uri)
+        
         write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index)
-        write_characteristic(sf,manager,available_bandwidth,mAP_drop,frame_index,consumed_bw)
+        write_characteristic(sf,manager,available_bandwidth,mAP_drop,frame_index,consumed_bw,cmp)
         sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
 
         # Concatenate sample statistics

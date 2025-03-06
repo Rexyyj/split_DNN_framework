@@ -81,9 +81,9 @@ class Manager():
             for p in self.test_pruning:
                 for q_j in self.jpeg_quality:
                     self.test_points.append((1,p,q_j))
-                if p <=0.2:
-                    for q_d in self.decomposition_quality:
-                        self.test_points.append((2, p,q_d))
+                # if p <=0.2:
+                for q_d in self.decomposition_quality:
+                    self.test_points.append((2, p,q_d))
                 for q_r in self.regression_quality:
                     self.test_points.append((3,p,q_r))
                 
@@ -189,15 +189,16 @@ class Manager():
             if jpeg_transmission_time>0:
                 jpeg_target_cmp = self.raw_tensor_size / (available_bandwidth*jpeg_transmission_time)
                 jpeg_target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP 
-                s_points = list(self.jpeg_snr_samples.keys())
-                s_snrs = np.mean(np.array(list(self.jpeg_snr_samples.values())),axis=1)
-                s_cmps = np.min(np.array(list(self.jpeg_cmp_samples.values())),axis=1)
-                problem =Problem(jpeg_target_snr,jpeg_target_cmp,s_points,s_cmps,s_snrs,[0,60],[35, 100])
-                self.result_jpeg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                s_points_jpeg = list(self.jpeg_snr_samples.keys())
+                s_snrs_jpeg = np.mean(np.array(list(self.jpeg_snr_samples.values())),axis=1)
+                s_cmps_jpeg = np.min(np.array(list(self.jpeg_cmp_samples.values())),axis=1)
+                problem_jpeg =Problem(jpeg_target_snr,jpeg_target_cmp,s_points_jpeg,s_cmps_jpeg,s_snrs_jpeg,[0,60],[35, 100])
+                self.result_jpeg = minimize(problem_jpeg, self.algorithm, termination=self.termination,seed=1,verbose=False)
                 try:
-                    jpeg_manager_cmp= griddata(s_points, s_cmps, ( self.result_jpeg.X[0]/100,  self.result_jpeg.X[1]), method='linear')
-                    jpeg_manager_snr= griddata(s_points, s_snrs, ( self.result_jpeg.X[0]/100,  self.result_jpeg.X[1]), method='linear')
+                    jpeg_manager_cmp= griddata(s_points_jpeg, s_cmps_jpeg, ( self.result_jpeg.X[0]/100,  self.result_jpeg.X[1]), method='linear')
+                    jpeg_manager_snr= griddata(s_points_jpeg, s_snrs_jpeg, ( self.result_jpeg.X[0]/100,  self.result_jpeg.X[1]), method='linear')
                 except:
+                    self.result_jpeg = None
                     jpeg_manager_cmp=-1
                     jpeg_manager_snr=-1
             else:
@@ -208,15 +209,16 @@ class Manager():
             if decom_transmission_time>0:
                 decom_target_cmp =  self.raw_tensor_size/ (available_bandwidth*decom_transmission_time)
                 decom_target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop 
-                s_points = list(self.decom_snr_samples.keys())
-                s_snrs = np.mean(np.array(list(self.decom_snr_samples.values())),axis=1)
-                s_cmps = np.min(np.array(list(self.decom_cmp_samples.values())),axis=1)
-                problem =Problem(decom_target_snr,decom_target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
-                self.result_decom = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                s_points_decom = list(self.decom_snr_samples.keys())
+                s_snrs_decom = np.mean(np.array(list(self.decom_snr_samples.values())),axis=1)
+                s_cmps_decom = np.min(np.array(list(self.decom_cmp_samples.values())),axis=1)
+                problem_decom =Problem(decom_target_snr,decom_target_cmp,s_points_decom,s_cmps_decom,s_snrs_decom,[0,1],[25, 5])
+                self.result_decom = minimize(problem_decom, self.algorithm, termination=self.termination,seed=1,verbose=False)
                 try:
-                    decom_manager_cmp= griddata(s_points, s_cmps, ( self.result_decom.X[0]/100,  self.result_decom.X[1]), method='linear')
-                    decom_manager_snr= griddata(s_points, s_snrs, ( self.result_decom.X[0]/100,  self.result_decom.X[1]), method='linear')
+                    decom_manager_cmp= griddata(s_points_decom, s_cmps_decom, ( self.result_decom.X[0]/100,  self.result_decom.X[1]), method='linear')
+                    decom_manager_snr= griddata(s_points_decom, s_snrs_decom, ( self.result_decom.X[0]/100,  self.result_decom.X[1]), method='linear')
                 except:
+                    self.result_decom= None
                     decom_manager_cmp=-1
                     decom_manager_snr=-1
             else:
@@ -227,15 +229,16 @@ class Manager():
             if reg_transmission_time>0:
                 reg_target_cmp =  self.raw_tensor_size/ (available_bandwidth*reg_transmission_time)
                 reg_target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop*0.8,tolerable_mAP_drop*0.8) # use same drop 
-                s_points = list(self.reg_snr_samples.keys())
-                s_snrs = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
-                s_cmps = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
-                problem =Problem(reg_target_snr,reg_target_cmp,s_points,s_cmps,s_snrs,[0,1],[35, 6])
-                self.result_reg = minimize(problem, self.algorithm, termination=self.termination,seed=1,verbose=False)
+                s_points_reg = list(self.reg_snr_samples.keys())
+                s_snrs_reg = np.mean(np.array(list(self.reg_snr_samples.values())),axis=1)
+                s_cmps_reg = np.min(np.array(list(self.reg_cmp_samples.values())),axis=1)
+                problem_reg =Problem(reg_target_snr,reg_target_cmp,s_points_reg,s_cmps_reg,s_snrs_reg,[0,1],[35, 6])
+                self.result_reg = minimize(problem_reg, self.algorithm, termination=self.termination,seed=1,verbose=False)
                 try:
-                    reg_manager_cmp= griddata(s_points, s_cmps, ( self.result_reg.X[0]/100,  self.result_reg.X[1]), method='linear')
-                    reg_manager_snr= griddata(s_points, s_snrs, ( self.result_reg.X[0]/100,  self.result_reg.X[1]), method='linear')
+                    reg_manager_cmp= griddata(s_points_reg, s_cmps_reg, ( self.result_reg.X[0]/100,  self.result_reg.X[1]), method='linear')
+                    reg_manager_snr= griddata(s_points_reg, s_snrs_reg, ( self.result_reg.X[0]/100,  self.result_reg.X[1]), method='linear')
                 except:
+                    self.result_reg = None
                     reg_manager_cmp=-1
                     reg_manager_snr=-1
             else:

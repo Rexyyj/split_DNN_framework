@@ -117,10 +117,11 @@ class SplitFramework():
                 try:
                     ft = tl.decomposition.parafac(tensor[i], rank=self.quality)
                     factors.append(ft)
-                    compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4 # float in bytes
-                    compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4 # float in bytes
+                    # compressed_size += (ft.factors[0].shape[0]*ft.factors[0].shape[1])*4 # float in bytes
+                    # compressed_size += (ft.factors[1].shape[0]*ft.factors[1].shape[1])*4 # float in bytes
                 except:
                     factors.append(0)
+        compressed_size = 128*(26+26)*self.quality*4
         reconstructed_tensor = self.decompressor_decomposition(tensor.shape, factors)
         return factors, compressed_size, reconstructed_tensor 
 
