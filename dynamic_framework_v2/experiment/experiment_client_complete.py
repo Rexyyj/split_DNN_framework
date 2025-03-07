@@ -22,6 +22,7 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from algorithm.manager_full import Manager
 from split_framework.gnb import GNB
+import random
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -34,7 +35,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "full_manager_test"
+test_case = "full_manager_test7"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -80,7 +81,7 @@ with open(manager_output_path,"a") as f:
     title= (
         "frame_id,"
         "bandwidth,"
-        "mAP_drop,"
+        "drop,"
         "target_fps,"
         "technique,"
         "feasibility,"
@@ -102,7 +103,7 @@ with open(map_output_path,'a') as f:
             "quality,"
             "technique,"
             "bandwidth,"
-            "mAP_drop,"
+            "drop,"
             "frame_id,"
             "feasible,"
             "sensitivity,"
@@ -114,7 +115,7 @@ with open(time_output_path,'a') as f:
             "quality,"
             "technique,"
             "bandwidth,"
-            "mAP_drop,"
+            "drop,"
             "frame_id,"
             "model_head_time,"
             "model_tail_time,"
@@ -132,7 +133,7 @@ with open(characteristic_output_path,'a') as f:
             "quality,"
             "technique,"
             "bandwidth,"
-            "mAP_drop,"
+            "drop,"
             "frame_id,"
             "sparsity,"
             "decomposability,"
@@ -175,13 +176,13 @@ def print_eval_stats(metrics_output, class_names, verbose):
         print("---- mAP not measured (no detections found by model) ----")
     return precision, recall, AP, f1, ap_class
 
-def write_manager_data(frame_id, bandwidth, mAP_drop, target_fps,manager,opt_time):
+def write_manager_data(frame_id, bandwidth, drop, target_fps,manager,opt_time):
 
     with open(manager_output_path,"a") as f:
         f.write(
             str(frame_id)+","
             +str(bandwidth)+","
-            +str(mAP_drop)+","
+            +str(drop)+","
             +str(target_fps)+","
             +str(manager.get_compression_technique())+","
             +str(manager.get_feasibility())+","
@@ -197,7 +198,7 @@ def write_manager_data(frame_id, bandwidth, mAP_drop, target_fps,manager,opt_tim
             +str(opt_time)+"\n"
         )
 
-def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
+def write_time_data(sf, thresh,quality,tech,bandwidth, drop,frame_id):
     model_head_time, model_tail_time = sf.get_model_time_measurement()
     fw_head_time,fw_tail_time,fw_response_time = sf.get_framework_time_measurement()
     compression_time, decompression_time = sf.get_compression_time_measurement()
@@ -208,7 +209,7 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
                 +str(quality)+","
                 +str(tech)+","
                 +str(bandwidth)+","
-                +str(mAP_drop)+","
+                +str(drop)+","
                 +str(frame_id)+","
                 +str(model_head_time)+","
                 +str(model_tail_time)+","
@@ -220,7 +221,7 @@ def write_time_data(sf, thresh,quality,tech,bandwidth, mAP_drop,frame_id):
                 +str(overall_time)+"\n"
                 )
         
-def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id, consumed_bw, cmp_ratio):
+def write_characteristic(sf, manager,bandwidth,drop,frame_id, consumed_bw, cmp_ratio):
     sparsity, decomposability,regularity,pictoriality = sf.get_tensor_characteristics()
     datasize_est, datasize_real = sf.get_data_size()
     reconstruct_snr = sf.get_reconstruct_snr()
@@ -232,7 +233,7 @@ def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id, consumed_bw, c
                 +str(manager.get_compression_quality())+","
                 +str(manager.get_compression_technique())+","
                 +str(bandwidth)+","
-                +str(mAP_drop)+","
+                +str(drop)+","
                 +str(frame_id)+","
                 +str(sparsity)+","
                 +str(decomposability)+","
@@ -247,13 +248,13 @@ def write_characteristic(sf, manager,bandwidth,mAP_drop,frame_id, consumed_bw, c
                 +str(consumed_bw)+"\n"
                 )
         
-def write_map( thresh,quality,tech,bandwidth,mAP_drop,frame_id,feasibility,sensitivity,map_value):
+def write_map( thresh,quality,tech,bandwidth,drop,frame_id,feasibility,sensitivity,map_value):
     with open(map_output_path,'a') as f:
                 f.write(str(thresh)+","
                         +str(quality)+","
                         +str(tech)+","
                         +str(bandwidth)+","
-                        +str(mAP_drop)+","
+                        +str(drop)+","
                         +str(frame_id)+","
                         +str(feasibility)+","
                         +str(sensitivity)+","
@@ -313,15 +314,22 @@ if __name__ == "__main__":
     
     previouse_bandwidth = 0
     previouse_snr =0
-
+    previouse_drop = 0
     ################## Init measurement lists ##########################
     frame_index = 0
+    drop = 0.3
     for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
         frame_index+=1
 
         # availble bandwith calculation
         available_bandwidth = update_user_loc_and_get_bw()/100
-        mAP_drop =0.3
+        
+        if frame_index%10==0:
+            drop = (1-available_bandwidth/(1e6*8))*100
+            drop = round(drop)/100
+            drop = max(0.05,drop)
+            drop = min(0.5,drop)
+            # drop = random.choice(drop_list)
         target_fps = 5
         # technique = 1
 
@@ -330,19 +338,34 @@ if __name__ == "__main__":
         # check framework update events and run manager 
         manager_begin = time.time_ns()
         if frame_index< manager.get_testing_frame_length()+1:
-            manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
+            print("In initial phase")
+            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            previouse_drop = drop
+            previouse_bandwidth = available_bandwidth
         elif abs(available_bandwidth-previouse_bandwidth)>1e6:
-            manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
+            print("In bandwidth change update")
+            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            previouse_drop = drop
             previouse_bandwidth = available_bandwidth
         elif (manager.get_target_snr() - previouse_snr)/manager.get_target_snr() > 0.3:
-            manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
+            print("In SNR exceed update")
+            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            previouse_drop =drop
             previouse_bandwidth = available_bandwidth
+        elif previouse_drop!=drop:
+            print("In target drop change update")
+            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+            fesiable = manager.get_feasibility()
+            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            previouse_drop =drop
+            previouse_bandwidth = available_bandwidth
+
 
         
         # thresh, quality = manager.get_configuration() 
@@ -377,8 +400,8 @@ if __name__ == "__main__":
             consumed_bw = sf.get_data_size()[0]*8 / manager.get_transmission_time() # in bps
         
         
-        write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index)
-        write_characteristic(sf,manager,available_bandwidth,mAP_drop,frame_index,consumed_bw,cmp)
+        write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,drop,frame_index)
+        write_characteristic(sf,manager,available_bandwidth,drop,frame_index,consumed_bw,cmp)
         sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
 
         # Concatenate sample statistics
@@ -391,9 +414,9 @@ if __name__ == "__main__":
             sensitivity = np.sum(true_positives) / len(labels)
             precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
             ## Save data
-            write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index,fesiable,sensitivity,AP.mean())
+            write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,drop,frame_index,fesiable,sensitivity,AP.mean())
         except:
-            write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),manager.get_compression_technique(),available_bandwidth,mAP_drop,frame_index,fesiable,0, 0)
+            write_map(manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),manager.get_compression_technique(),available_bandwidth,drop,frame_index,fesiable,0, 0)
 
         
 
