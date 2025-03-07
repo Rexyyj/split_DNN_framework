@@ -34,7 +34,7 @@ testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
 
-test_case = "full_manager_test6"
+test_case = "full_manager_test"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -333,12 +333,12 @@ if __name__ == "__main__":
             manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
             write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
-        elif abs(available_bandwidth-previouse_bandwidth)>1e6*5:
+        elif abs(available_bandwidth-previouse_bandwidth)>1e6:
             manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
             write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
             previouse_bandwidth = available_bandwidth
-        elif (manager.get_target_snr() - previouse_snr) > 0.1:
+        elif (manager.get_target_snr() - previouse_snr)/manager.get_target_snr() > 0.3:
             manager.update_requirements(mAP_drop,target_fps,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
             write_manager_data(frame_index,available_bandwidth,mAP_drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
