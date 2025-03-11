@@ -174,7 +174,7 @@ class Manager():
         return self.target_transmission_time
         
     def update_requirements(self,tolerable_mAP_drop, target_fps,available_bandwidth, f_index): # [%, bps]
-        available_bandwidth = available_bandwidth*0.5
+        # available_bandwidth = available_bandwidth*0.5
         # self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
         # self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP and sen
 
