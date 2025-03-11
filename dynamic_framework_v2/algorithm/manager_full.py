@@ -121,6 +121,15 @@ class Manager():
         else:
             return  self.target_pruning,self.target_quality
         
+    def set_compression_technique(self,tech):
+        self.target_technique = tech
+    
+    def set_pruning_threshold(self, thresh):
+        self.target_pruning =thresh
+    
+    def set_compression_quality(self, qua):
+        self.target_quality= qua
+        
     def get_compression_technique(self):
         return self.target_technique
     

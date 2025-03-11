@@ -38,7 +38,7 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
 log_dir = "../measurements/"
 
-test_case = "real_bw_test_15fps"
+test_case = "static_test_15fps"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -327,7 +327,7 @@ if __name__ == "__main__":
         frame_index+=1
         target_fps = 15
         # availble bandwith calculation
-        available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6
+        available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/target_fps)+30, method='nearest')/5-20)*1e6
         
         if frame_index%10==0:
             drop = (1-available_bandwidth/(1e7))*100
@@ -341,37 +341,39 @@ if __name__ == "__main__":
         # interframe similarity calculation
 
         # check framework update events and run manager 
-        manager_begin = time.time_ns()
-        if frame_index< manager.get_testing_frame_length()+1:
-            print("In initial phase")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
-            fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
-            previouse_drop = drop
-            previouse_bandwidth = available_bandwidth
-        elif available_bandwidth!=previouse_bandwidth:
-            print("In bandwidth change update")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
-            fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
-            previouse_drop = drop
-            previouse_bandwidth = available_bandwidth
-        elif (manager.get_target_snr() - previouse_snr)/manager.get_target_snr() > 0.3:
-            print("In SNR exceed update")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
-            fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
-            previouse_drop =drop
-            previouse_bandwidth = available_bandwidth
-        elif previouse_drop!=drop:
-            print("In target drop change update")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
-            fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
-            previouse_drop =drop
-            previouse_bandwidth = available_bandwidth
-
-
+        # manager_begin = time.time_ns()
+        # if frame_index< manager.get_testing_frame_length()+1:
+        #     print("In initial phase")
+        #     manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+        #     fesiable = manager.get_feasibility()
+        #     write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+        #     previouse_drop = drop
+        #     previouse_bandwidth = available_bandwidth
+        # elif available_bandwidth!=previouse_bandwidth:
+        #     print("In bandwidth change update")
+        #     manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+        #     fesiable = manager.get_feasibility()
+        #     write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+        #     previouse_drop = drop
+        #     previouse_bandwidth = available_bandwidth
+        # elif (manager.get_target_snr() - previouse_snr)/manager.get_target_snr() > 0.3:
+        #     print("In SNR exceed update")
+        #     manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+        #     fesiable = manager.get_feasibility()
+        #     write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+        #     previouse_drop =drop
+        #     previouse_bandwidth = available_bandwidth
+        # elif previouse_drop!=drop:
+        #     print("In target drop change update")
+        #     manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+        #     fesiable = manager.get_feasibility()
+        #     write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+        #     previouse_drop =drop
+        #     previouse_bandwidth = available_bandwidth
+        manager.set_compression_technique(1)
+        manager.set_compression_quality(100)
+        manager.set_pruning_threshold(0)
+        fesiable =-1
         
         # thresh, quality = manager.get_configuration() 
         # set framework configuration
@@ -399,10 +401,10 @@ if __name__ == "__main__":
         manager.update_sample_points(manager.get_compression_technique(),(manager.get_pruning_threshold(),manager.get_compression_quality()),cmp,sf.get_reconstruct_snr())
         previouse_snr = sf.get_reconstruct_snr()
 
-        if manager.get_transmission_time()  == -1:
-            consumed_bw =-1
-        else:
-            consumed_bw = sf.get_data_size()[0]*8 / manager.get_transmission_time() # in bps
+        # if manager.get_transmission_time()  == -1:
+        #     consumed_bw =-1
+        # else:
+        consumed_bw = sf.get_data_size()[0]*8 / (1/target_fps-0.01) # in bps
         
         
         write_time_data(sf,manager.get_pruning_threshold(),manager.get_compression_quality(),manager.get_compression_technique(),available_bandwidth,drop,frame_index)
