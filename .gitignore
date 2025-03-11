@@ -5,3 +5,4 @@ __pycache__/
 pytorchyolo/data/vidvrd/images/
 pytorchyolo/data/vidvrd/labels/
 stable_tests/measurements_vidvrd/
+dataset/
