@@ -20,7 +20,7 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-__COMPRESSION_TECHNIQUE__ = "decomposition"
+__COMPRESSION_TECHNIQUE__ = "decomposition2"
 
 N_warmup = 0
 split_layer= int(sys.argv[1])
@@ -33,9 +33,9 @@ split_layer= int(sys.argv[1])
 # class_name_path = "../../pytorchyolo/data/vidvrd/classes.names"
 # log_dir = "../measurements_vidvrd/"
 
-testdata_path = "../../dataset/football/valid.txt"
-class_name_path = "../../dataset/football/classes.names"
-log_dir = "../measurements_football/"
+testdata_path = "../../dataset/vidvrd/snr_test.txt"
+class_name_path = "../../dataset/vidvrd/classes.names"
+log_dir = "../measurements_vidvrd/"
 
 test_case = "decomposition"
 service_uri = "http://10.0.1.34:8091/tensor"
@@ -206,7 +206,7 @@ def write_map( thresh,quality,frame_id,sensitivity,map_value):
 if __name__ == "__main__":
     # Load Model
     # model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
-    model = models_split_tiny.load_model("../ckpt/vidVRD.cfg","../ckpt/football.pth")
+    model = models_split_tiny.load_model("../ckpt/vidVRD.cfg","../ckpt/vidVRD.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
