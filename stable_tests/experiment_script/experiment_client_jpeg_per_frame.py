@@ -20,7 +20,7 @@ from pytorchyolo.utils.datasets import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 
 ################################### Varialbe init ###################################
-__COMPRESSION_TECHNIQUE__ = "jpeg2"
+__COMPRESSION_TECHNIQUE__ = "jpeg"
 
 N_warmup = 0
 split_layer= int(sys.argv[1])
@@ -37,7 +37,7 @@ testdata_path = "../../dataset/vidvrd/snr_test.txt"
 class_name_path = "../../dataset/vidvrd/classes.names"
 log_dir = "../measurements_vidvrd/"
 
-test_case = "jpeg"
+test_case = "jpeg2"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
