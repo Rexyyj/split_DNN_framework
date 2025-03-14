@@ -29,9 +29,9 @@ split_layer= int(sys.argv[1])
 # testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 # testdata_path = "../../St_Marc_dataset/data/test_0.txt"
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
-testdata_path = "../../dataset/football/valid.txt"
-class_name_path = "../../dataset/football/classes.names"
-log_dir = "../measurements_football/"
+testdata_path = "../../dataset/vidvrd/snr_test.txt"
+class_name_path = "../../dataset/vidvrd/classes.names"
+log_dir = "../measurements_vidvrd/"
 
 test_case = "local"
 service_uri = "http://10.0.1.34:8092/tensor"
@@ -204,7 +204,7 @@ def write_map( thresh,quality,tech,frame_id,sensitivity,map_value):
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../ckpt/vidVRD.cfg","../ckpt/football.pth")
+    model = models_split_tiny.load_model("../ckpt/vidVRD.cfg","../ckpt/vidVRD.pth")
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     
