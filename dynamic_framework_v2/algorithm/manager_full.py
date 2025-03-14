@@ -191,7 +191,7 @@ class Manager():
         # Define optimization problem
         if f_index >= len(self.test_points):
             
-            jpeg_transmission_time = 1/target_fps - 0.016 - 0.01
+            jpeg_transmission_time = -1#1/target_fps - 0.016 - 0.01
             decom_transmission_time = 1/target_fps - 0.016 - 0.1
             reg_transmission_time = 1/target_fps - 0.016 - 0.1
             # jpeg optimization

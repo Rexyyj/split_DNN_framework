@@ -38,7 +38,7 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
 log_dir = "../measurements/"
 
-test_case = "real_bw_test_15fps"
+test_case = "real_bw_no_jpeg"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -325,14 +325,14 @@ if __name__ == "__main__":
     drop = 0.3
     for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
         frame_index+=1
-        target_fps = 15
+        target_fps = 5
         # availble bandwith calculation
         available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6
         
         if frame_index%10==0:
             drop = (1-available_bandwidth/(1e7))*100
             drop = round(drop)/100
-            drop = max(0.05,drop)
+            drop = max(0.2,drop)
             drop = min(0.5,drop)
             # drop = random.choice(drop_list)
       
