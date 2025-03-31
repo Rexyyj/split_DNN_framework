@@ -326,7 +326,7 @@ class SplitFramework():
             self._decompression_time = self.time_start.elapsed_time(self.time_end)
 
             self.time_start.record()
-            reconstructed_head_tensor = self.reference_tensor 
+            reconstructed_head_tensor = reconstructed_tensor 
             self.reference_tensor = reconstructed_head_tensor
             self.time_end.record()
             torch.cuda.synchronize()
@@ -340,7 +340,7 @@ class SplitFramework():
                 reconstructed_tensor = self.decompressor_regression(tensor_dict["tensor_shape"],tensor_dict["factors"],tensor_dict["x_pos"],tensor_dict["x_neg"])
             else:
                 raise Exception("Unknow compression technique!!!")
-            reconstructed_head_tensor = self.reference_tensor 
+            reconstructed_head_tensor = reconstructed_tensor
             self.reference_tensor = reconstructed_head_tensor
         return reconstructed_head_tensor
     
