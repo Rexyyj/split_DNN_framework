@@ -9,7 +9,7 @@ import time
 import torch
 import math
 import os
-from split_framework.split_framework_dynamic import SplitFramework
+from split_framework.split_framework_dynamic_direct import SplitFramework
 import tqdm
 import numpy as np
 import requests, pickle
@@ -38,7 +38,7 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
 log_dir = "../measurements/"
 
-test_case = "static_test_low"
+test_case = "static_test_50"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -371,7 +371,7 @@ if __name__ == "__main__":
         #     previouse_drop =drop
         #     previouse_bandwidth = available_bandwidth
         manager.set_compression_technique(1)
-        manager.set_compression_quality(30)
+        manager.set_compression_quality(50)
         manager.set_pruning_threshold(0)
         fesiable =-1
         
