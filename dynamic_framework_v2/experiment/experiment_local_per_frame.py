@@ -26,14 +26,17 @@ __COMPRESSION_TECHNIQUE__ = "jpeg"
 N_warmup = 0
 split_layer= int(sys.argv[1])
 
-# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
-# testdata_path = "../../St_Marc_dataset/data/test_0.txt"
-# class_name_path = "../../St_Marc_dataset/data/coco.names"
-testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
-class_name_path = "../../St_Marc_dataset/data/coco.names"
-log_dir = "../measurements/"
+cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
+model_path = "../ckpt/bev.pth"
 
-test_case = "local_time_short"
+# testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
+# class_name_path = "../../St_Marc_dataset/data/coco.names"
+
+testdata_path = "../../dataset/football/test_long.txt"
+class_name_path = "../../dataset/football/classes.names"
+log_dir = "../measurements_bev/"
+
+test_case = "local_test"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -195,7 +198,7 @@ def write_map( thresh,quality,tech,frame_id,sensitivity,map_value):
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model(cfg_path,model_path)
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
     time_start = torch.cuda.Event(enable_timing=True)

@@ -32,13 +32,20 @@ warnings.filterwarnings("ignore")
 
 split_layer= int(sys.argv[1])
 
-testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
-# testdata_path = "../../St_Marc_dataset/data/test_0.txt"
-class_name_path = "../../St_Marc_dataset/data/coco.names"
-bw_measurements = "../5G_bw_trace/5G_bw.csv"
-log_dir = "../measurements/"
 
-test_case = "real_bw_no_jpeg"
+cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
+model_path = "../ckpt/bev.pth"
+
+testdata_path = "../../dataset/football/test_long.txt"
+class_name_path = "../../dataset/football/classes.names"
+log_dir = "../measurements_bev/"
+
+# testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
+# class_name_path = "../../St_Marc_dataset/data/coco.names"
+# log_dir = "../measurements/"
+
+bw_measurements = "../5G_bw_trace/5G_bw.csv"
+test_case = "test_ltl_15"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -291,7 +298,7 @@ def write_map( thresh,quality,tech,bandwidth,drop,frame_id,feasibility,sensitivi
 
 if __name__ == "__main__":
     # Load Model
-    model = models_split_tiny.load_model("../../pytorchyolo/config/yolov3-tiny.cfg","../ckpt/yolov3_ckpt_300.pth")
+    model = models_split_tiny.load_model(cfg_path, model_path)
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
 
@@ -325,7 +332,7 @@ if __name__ == "__main__":
     drop = 0.3
     for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
         frame_index+=1
-        target_fps = 5
+        target_fps = 15
         # availble bandwith calculation
         available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6
         

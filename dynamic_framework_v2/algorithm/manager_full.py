@@ -93,8 +93,14 @@ class Manager():
         self.solution_feasiable = 0
         
         # ToDo: update drop curve
-        self.map_curve = [0.059, 0.546, 2]
-        self.sen_curve = [0.064, 0.622, 2]
+
+        # STMARC [k, h, b]
+        # self.map_curve = [0.059, 0.546, 2]
+        # self.sen_curve = [0.064, 0.622, 2]
+
+        # BEV [k, h, b]
+        self.map_curve = [0.218, 1.674, 0]
+        self.sen_curve = [0.182, 1.044, 0]
         
         # Algorithm configurations
         # self.algorithm = GA(pop_size=20)
