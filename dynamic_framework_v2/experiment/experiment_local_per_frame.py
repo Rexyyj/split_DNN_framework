@@ -27,14 +27,18 @@ N_warmup = 0
 split_layer= int(sys.argv[1])
 
 cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
-model_path = "../ckpt/bev.pth"
+model_path = "../ckpt/vidVRD.pth"
 
 # testdata_path = "../../St_Marc_dataset/data/test_30_fps_cleaned.txt"
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
 
-testdata_path = "../../dataset/football/test_long.txt"
-class_name_path = "../../dataset/football/classes.names"
-log_dir = "../measurements_bev/"
+# testdata_path = "../../dataset/football/test_long.txt"
+# class_name_path = "../../dataset/football/classes.names"
+# log_dir = "../measurements_bev/"
+
+testdata_path = "../../dataset/vidvrd/test_long.txt"
+class_name_path = "../../dataset/vidvrd/classes.names"
+log_dir = "../measurements_vidvrd/"
 
 test_case = "local_test"
 service_uri = "http://10.0.1.34:8092/tensor"
