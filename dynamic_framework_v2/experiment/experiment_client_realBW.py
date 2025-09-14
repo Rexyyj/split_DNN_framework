@@ -49,7 +49,7 @@ log_dir = "../measurements_vidvrd/"
 # log_dir = "../measurements/"
 
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
-test_case = "test_ltl_15"
+test_case = "test_mtl_hl_5"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     drop = 0.3
     for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
         frame_index+=1
-        target_fps = 15
+        target_fps = 5
         # availble bandwith calculation
         available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6*3
         
@@ -346,7 +346,7 @@ if __name__ == "__main__":
             drop = max(0.2,drop)
             drop = min(0.5,drop)
 
-            # drop = drop+0.1 # only for no jpeg
+            drop = drop+0.1 # only for no jpeg
       
         # technique = 1
 

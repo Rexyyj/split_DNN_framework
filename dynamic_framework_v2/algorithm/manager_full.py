@@ -99,9 +99,13 @@ class Manager():
         # self.sen_curve = [0.064, 0.622, 2]
 
         # BEV [k, h, b]
-        self.map_curve = [0.218, 1.674, 0]
-        self.sen_curve = [0.182, 1.044, 0]
+        # self.map_curve = [0.218, 1.674, 0]
+        # self.sen_curve = [0.182, 1.044, 0]
         
+        # vidVRD [k, h, b]
+        self.map_curve = [0.176, 2.385, 6]
+        self.sen_curve = [0.210, 3.451, 6]
+
         # Algorithm configurations
         # self.algorithm = GA(pop_size=20)
         self.algorithm = GA(pop_size=20,
@@ -197,7 +201,7 @@ class Manager():
         # Define optimization problem
         if f_index >= len(self.test_points):
             
-            jpeg_transmission_time = 1/target_fps - 0.016 - 0.01
+            jpeg_transmission_time = -1 #1/target_fps - 0.016 - 0.01
             decom_transmission_time = 1/target_fps - 0.016 - 0.1
             reg_transmission_time = 1/target_fps - 0.016 - 0.1
             # jpeg optimization
