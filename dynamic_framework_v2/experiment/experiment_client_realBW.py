@@ -334,14 +334,15 @@ if __name__ == "__main__":
         frame_index+=1
         target_fps = 15
         # availble bandwith calculation
-        available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6
+        available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6*3
         
         if frame_index%10==0:
-            drop = (1-available_bandwidth/(1e7))*100
+            drop = (1-available_bandwidth/(3e7))*100
             drop = round(drop)/100
             drop = max(0.2,drop)
             drop = min(0.5,drop)
-            # drop = random.choice(drop_list)
+
+            # drop = drop+0.1 # only for no jpeg
       
         # technique = 1
 
