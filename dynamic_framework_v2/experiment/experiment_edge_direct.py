@@ -11,7 +11,7 @@ import pickle
 from split_framework.split_framework_dynamic_direct import SplitFramework
 
 cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
-model_path = "../ckpt/vidVRD.pth"
+model_path = "../ckpt/bev.pth"
 
 def get_dummy_tensor(split_layer):
     if split_layer==8:

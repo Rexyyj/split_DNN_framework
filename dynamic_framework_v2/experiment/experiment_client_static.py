@@ -34,15 +34,15 @@ split_layer= int(sys.argv[1])
 
 
 cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
-model_path = "../ckpt/vidVRD.pth"
+model_path = "../ckpt/bev.pth"
 
-# testdata_path = "../../dataset/football/test_long.txt"
-# class_name_path = "../../dataset/football/classes.names"
-# log_dir = "../measurements_bev/"
+testdata_path = "../../dataset/football/test_long.txt"
+class_name_path = "../../dataset/football/classes.names"
+log_dir = "../measurements_bev/"
 
-testdata_path = "../../dataset/vidvrd/test_long.txt"
-class_name_path = "../../dataset/vidvrd/classes.names"
-log_dir = "../measurements_vidvrd/"
+# testdata_path = "../../dataset/vidvrd/test_long.txt"
+# class_name_path = "../../dataset/vidvrd/classes.names"
+# log_dir = "../measurements_vidvrd/"
 
 # testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
@@ -55,7 +55,7 @@ log_dir = "../measurements_vidvrd/"
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
 # log_dir = "../measurements/"
 
-test_case = "static_test_98"
+test_case = "static_test_50"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -388,7 +388,7 @@ if __name__ == "__main__":
         #     previouse_drop =drop
         #     previouse_bandwidth = available_bandwidth
         manager.set_compression_technique(1)
-        manager.set_compression_quality(98)
+        manager.set_compression_quality(40)
         manager.set_pruning_threshold(0)
         fesiable =-1
         
