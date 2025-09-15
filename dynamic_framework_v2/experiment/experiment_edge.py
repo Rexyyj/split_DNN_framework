@@ -12,7 +12,7 @@ from split_framework.split_framework_dynamic import SplitFramework
 
 
 cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
-model_path = "../ckpt/bev.pth"
+model_path = "../ckpt/vidVRD.pth"
 
 
 

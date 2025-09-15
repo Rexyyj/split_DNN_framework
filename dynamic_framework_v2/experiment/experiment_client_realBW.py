@@ -34,15 +34,15 @@ split_layer= int(sys.argv[1])
 
 
 cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
-model_path = "../ckpt/bev.pth"
+model_path = "../ckpt/vidVRD.pth"
 
-testdata_path = "../../dataset/football/test_long.txt"
-class_name_path = "../../dataset/football/classes.names"
-log_dir = "../measurements_bev/"
+# testdata_path = "../../dataset/football/test_long.txt"
+# class_name_path = "../../dataset/football/classes.names"
+# log_dir = "../measurements_bev/"
 
-# testdata_path = "../../dataset/vidvrd/test_long.txt"
-# class_name_path = "../../dataset/vidvrd/classes.names"
-# log_dir = "../measurements_vidvrd/"
+testdata_path = "../../dataset/vidvrd/test_long.txt"
+class_name_path = "../../dataset/vidvrd/classes.names"
+log_dir = "../measurements_vidvrd/"
 
 # testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 # class_name_path = "../../St_Marc_dataset/data/coco.names"
@@ -338,15 +338,15 @@ if __name__ == "__main__":
         frame_index+=1
         target_fps = 15
         # availble bandwith calculation
-        available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6
+        available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6*1.5
         
         if frame_index%10==0:
-            drop = (1-available_bandwidth/(1e7))*100
+            drop = (1-available_bandwidth/(1.5e7))*100
             drop = round(drop)/100
             drop = max(0.2,drop)
             drop = min(0.5,drop)
 
-            drop = drop+0.2 # only for no jpeg
+            # drop = drop+0.3 # only for no jpeg
       
         # technique = 1
 
