@@ -26,6 +26,7 @@ import random
 from scipy.interpolate import griddata
 import pandas as pd
 
+
 import warnings
 warnings.filterwarnings("ignore")
 ################################### Varialbe init ###################################
@@ -49,7 +50,7 @@ log_dir = "../measurements_vidvrd/"
 # log_dir = "../measurements/"
 
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
-test_case = "test_ltl_15_1"
+test_case = "test_ltl_15_1_test"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -299,13 +300,11 @@ def write_map( thresh,quality,tech,bandwidth,drop,frame_id,feasibility,sensitivi
 #     return bw
 
 ##################################################################################
-
 if __name__ == "__main__":
     # Load Model
     model = models_split_tiny.load_model(cfg_path, model_path)
     model.set_split_layer(model_split_layer) # layer <7
     model = model.eval()
-
     bw_df = pd.read_csv(bw_measurements)
     
     dataloader = create_data_loader(testdata_path)
