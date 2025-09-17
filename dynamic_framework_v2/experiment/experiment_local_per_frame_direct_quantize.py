@@ -28,6 +28,7 @@ split_layer= int(sys.argv[1])
 
 cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
 
+
 testdata_path = "../../St_Marc_dataset/data/test_30_fps_long_cleaned.txt"
 class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements/"
@@ -43,7 +44,7 @@ model_path = "../ckpt/stmarc.pth"
 # log_dir = "../measurements_vidvrd/"
 # model_path = "../ckpt/vidVRD.pth"
 
-test_case = "local_test"
+test_case = "direct_split_quantize"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -90,6 +91,7 @@ with open(map_output_path,'a') as f:
             "quality,"
             "technique,"
             "frame_id,"
+            "datasize,"
             "sensitivity,"
             "map\n")
     f.write(title)
@@ -97,7 +99,9 @@ with open(map_output_path,'a') as f:
 with open(time_output_path,'a') as f:
     title = (
             "frame_id,"
-            "overall_time\n"
+            "head_time,"
+            "serialize_time,"
+            "tail_time\n"
             )
     f.write(title)
 
@@ -190,7 +194,7 @@ def print_eval_stats(metrics_output, class_names, verbose):
 #                 +str(reconstruct_snr)+"\n"
 #                 )
         
-def write_map( thresh,quality,tech,frame_id,sensitivity,map_value):
+def write_map( thresh,quality,tech,frame_id,datasize,sensitivity,map_value):
     if __COMPRESSION_TECHNIQUE__ =="sketchml":
         quality= str(quality[0])+"-"+str(quality[1])+"-"+str(quality[2])
     with open(map_output_path,'a') as f:
@@ -198,6 +202,7 @@ def write_map( thresh,quality,tech,frame_id,sensitivity,map_value):
                         +str(quality)+","
                         +str(tech)+","
                         +str(frame_id)+","
+                        +str(datasize)+","
                         +str(sensitivity)+","
                         +str(map_value)+"\n"
                         )
@@ -244,13 +249,41 @@ if __name__ == "__main__":
                 imgs = Variable(imgs.type(Tensor), requires_grad=False)
                 with torch.no_grad():
                     head_tensor = model(imgs,1)
-                    inference_result = model(head_tensor,2)
-                    detection = non_max_suppression(inference_result, 0.01, 0.5)
-                    sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
                     # print(detection)
                 time_end.record()
                 torch.cuda.synchronize()
-                overall_time = time_start.elapsed_time(time_end)
+                head_time = time_start.elapsed_time(time_end)
+
+                time_start.record()
+                normalize_base =torch.abs(head_tensor).max()
+                tensor_normal = head_tensor / normalize_base
+                scale, zero_point = (tensor_normal.max()-tensor_normal.min())/255,127
+                dtype = torch.quint8
+                tensor_normal = torch.quantize_per_tensor(tensor_normal, scale, zero_point, dtype)
+                tensor_normal = tensor_normal.int_repr()
+                tensor_cpu = tensor_normal.cpu()
+                tensor_bytes = pickle.dumps(tensor_cpu)
+                datasize_to_trans = len(tensor_bytes)+ 12
+                time_end.record()
+                torch.cuda.synchronize()
+                ser_time = time_start.elapsed_time(time_end)
+
+
+                time_start.record()
+                with torch.no_grad():
+                    reconstructed_tensor = (tensor_normal.to(torch.float)-zero_point) * scale * normalize_base
+                    inference_result = model(head_tensor,2)
+                    # print(detection)
+                time_end.record()
+                torch.cuda.synchronize()
+                tail_time = time_start.elapsed_time(time_end)
+                
+                detection = non_max_suppression(inference_result, 0.01, 0.5)
+                sample_metrics = get_batch_statistics(detection, targets, iou_threshold=0.1)
+
+
+
+
                 # Concatenate sample statistics
                 true_positives, pred_scores, pred_labels = [
                     np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
@@ -260,10 +293,12 @@ if __name__ == "__main__":
                 sensitivity = np.sum(true_positives) / len(labels)
                 precision, recall, AP, f1, ap_class = print_eval_stats(metrics_output, class_names, True)
                 ## Save data
-                write_map(0,0,0,frame_index,sensitivity,AP.mean())
+                write_map(0,0,0,frame_index,datasize_to_trans,sensitivity,AP.mean())
                 with open(time_output_path,'a') as f:
                     f.write(str(frame_index)+","
-                            +str(overall_time)+"\n"
+                            +str(head_time)+","
+                            +str(ser_time)+","
+                            +str(tail_time)+"\n"
                             )
                 
 
