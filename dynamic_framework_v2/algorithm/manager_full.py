@@ -86,7 +86,7 @@ class Manager():
                     self.test_points.append((2, p,q_d))
                 for q_r in self.regression_quality:
                     self.test_points.append((3,p,q_r))
-                
+        random.seed(317462)
         random.shuffle(self.test_points)
 
         self.raw_tensor_size = 128*26*26*4*8 # in bits
@@ -99,12 +99,12 @@ class Manager():
         # self.sen_curve = [0.064, 0.622, 2]
 
         # BEV [k, h, b]
-        self.map_curve = [0.218, 1.674, 0]
-        self.sen_curve = [0.182, 1.044, 0]
+        # self.map_curve = [0.218, 1.674, 0]
+        # self.sen_curve = [0.182, 1.044, 0]
         
         # vidVRD [k, h, b]
-        # self.map_curve = [0.176, 2.385, 6]
-        # self.sen_curve = [0.210, 3.451, 6]
+        self.map_curve = [0.176, 2.385, 6]
+        self.sen_curve = [0.210, 3.451, 6]
 
         # Algorithm configurations
         # self.algorithm = GA(pop_size=20)
