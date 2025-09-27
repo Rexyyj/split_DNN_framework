@@ -1,0 +1,2 @@
+pruning_thresh,quality,technique,bandwidth,drop,frame_id,sparsity,decomposability,regularity,pictoriality,compression_ratio,datasize_est,datasize_real,reconstruct_snr,target_cmp,target_snr,consumed_bw
+0.15,100,1,6000000.0,0.3,1,-1,-1,-1,-1,-5537792.0,-1,-1,-1,-1,-1,-1

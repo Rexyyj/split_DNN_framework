@@ -1,0 +1,2 @@
+pruning_thresh,quality,technique,bandwidth,drop,frame_id,model_head_time,model_tail_time,framework_head_time,framework_tail_time,framework_response_time,compression_time,decompression_time,overall_time
+0.15,100,1,6000000.0,0.3,1,-1,-1,-1,-1,-1,-1,-1,-1

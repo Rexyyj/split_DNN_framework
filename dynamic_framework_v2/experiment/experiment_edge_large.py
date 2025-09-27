@@ -5,7 +5,7 @@ sys.path.append('../')
 
 import cherrypy
 
-from  pytorchyolo import models_split_tiny
+from  pytorchyolo import models_split_large
 import torch
 import pickle
 from split_framework.split_framework_dynamic import SplitFramework
@@ -52,7 +52,7 @@ class TailModelService:
 
     @cherrypy.tools.accept(media='text/plain')
     def __init__(self, split_layer,dummy_tensor) -> None:
-        self.model = models_split_tiny.load_model(
+        self.model = models_split_large.load_model(
             cfg_path,
             model_path)
         self.model.set_split_layer(split_layer) 

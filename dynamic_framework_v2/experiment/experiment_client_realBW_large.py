@@ -34,8 +34,8 @@ warnings.filterwarnings("ignore")
 split_layer= int(sys.argv[1])
 
 
-cfg_path = "../../pytorchyolo/config/yolov3-tiny.cfg"
-model_path = "../ckpt/vidVRD.pth"
+cfg_path = "../ckpt/yolov3.cfg"
+model_path = "../ckpt/stmarc_full.pth"
 
 # testdata_path = "../../dataset/football/test_long.txt"
 # class_name_path = "../../dataset/football/classes.names"
@@ -50,7 +50,7 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements_large/"
 
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
-test_case = "test_ltl_15_1_rb"
+test_case = "test_mtlhq_5"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
