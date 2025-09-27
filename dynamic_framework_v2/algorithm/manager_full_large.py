@@ -196,7 +196,7 @@ class Manager():
     def get_transmission_time(self):
         return self.target_transmission_time
         
-    def update_requirements(self,tolerable_mAP_drop, target_fps,available_bandwidth, f_index): # [%, bps]
+    def update_requirements(self,tolerable_mAP_drop, target_latency,available_bandwidth, f_index): # [%, bps]
         # available_bandwidth = available_bandwidth*0.5
         # self.target_cmp = self.raw_tensor_size / (available_bandwidth*self.available_transmission_time)
         # self.target_snr = self.get_snr_from_mapDrop(tolerable_mAP_drop,tolerable_mAP_drop) # use same drop for mAP and sen
@@ -205,7 +205,7 @@ class Manager():
         # Define optimization problem
         if f_index >= len(self.test_points):
             
-            jpeg_transmission_time = 1/target_fps - 0.016 - 0.01
+            jpeg_transmission_time = target_latency - 0.28 - 0.04 - 0.03
             decom_transmission_time =-1 # 1/target_fps - 0.016 - 0.1
             reg_transmission_time =-1# 1/target_fps - 0.016 - 0.1
             # jpeg optimization

@@ -50,7 +50,7 @@ class_name_path = "../../St_Marc_dataset/data/coco.names"
 log_dir = "../measurements_large/"
 
 bw_measurements = "../5G_bw_trace/5G_bw.csv"
-test_case = "test_mtlhq_5"
+test_case = "test_mtlhq_5_500"
 service_uri = "http://10.0.1.34:8092/tensor"
 reset_uri = "http://10.0.1.34:8092/reset"
 
@@ -100,7 +100,7 @@ with open(manager_output_path,"a") as f:
         "frame_id,"
         "bandwidth,"
         "drop,"
-        "target_fps,"
+        "target_latency,"
         "technique,"
         "feasibility,"
         "target_cmp,"
@@ -194,14 +194,14 @@ def print_eval_stats(metrics_output, class_names, verbose):
         print("---- mAP not measured (no detections found by model) ----")
     return precision, recall, AP, f1, ap_class
 
-def write_manager_data(frame_id, bandwidth, drop, target_fps,manager,opt_time):
+def write_manager_data(frame_id, bandwidth, drop, target_latency,manager,opt_time):
 
     with open(manager_output_path,"a") as f:
         f.write(
             str(frame_id)+","
             +str(bandwidth)+","
             +str(drop)+","
-            +str(target_fps)+","
+            +str(target_latency)+","
             +str(manager.get_compression_technique())+","
             +str(manager.get_feasibility())+","
             +str(manager.get_target_cmp())+","
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     drop = 0.3
     for _, imgs, targets in tqdm.tqdm(dataloader, desc="testing"):
         frame_index+=1
-        target_fps = 5
+        target_latency = 0.45
         # availble bandwith calculation
         available_bandwidth = (griddata(bw_df["time"],bw_df["bandwidth_tx"], frame_index*(1/5)+30, method='nearest')/5-20)*1e6
         
@@ -348,7 +348,7 @@ if __name__ == "__main__":
             drop = max(0.2,drop)
             drop = min(0.5,drop)
 
-            # drop = drop+0.3 # only for no jpeg
+            drop = drop+0.1 # only for no jpeg
       
         # technique = 1
 
@@ -358,30 +358,30 @@ if __name__ == "__main__":
         manager_begin = time.time_ns()
         if frame_index< manager.get_testing_frame_length()+1:
             print("In initial phase")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+            manager.update_requirements(drop,target_latency,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_latency, manager,(time.time_ns()-manager_begin)/1e6)
             previouse_drop = drop
             previouse_bandwidth = available_bandwidth
         elif available_bandwidth!=previouse_bandwidth:
             print("In bandwidth change update")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+            manager.update_requirements(drop,target_latency,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_latency, manager,(time.time_ns()-manager_begin)/1e6)
             previouse_drop = drop
             previouse_bandwidth = available_bandwidth
         elif (manager.get_target_snr() - previouse_snr)/manager.get_target_snr() > 0.3:
             print("In SNR exceed update")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+            manager.update_requirements(drop,target_latency,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_latency, manager,(time.time_ns()-manager_begin)/1e6)
             previouse_drop =drop
             previouse_bandwidth = available_bandwidth
         elif previouse_drop!=drop:
             print("In target drop change update")
-            manager.update_requirements(drop,target_fps,available_bandwidth,frame_index)
+            manager.update_requirements(drop,target_latency,available_bandwidth,frame_index)
             fesiable = manager.get_feasibility()
-            write_manager_data(frame_index,available_bandwidth,drop,target_fps, manager,(time.time_ns()-manager_begin)/1e6)
+            write_manager_data(frame_index,available_bandwidth,drop,target_latency, manager,(time.time_ns()-manager_begin)/1e6)
             previouse_drop =drop
             previouse_bandwidth = available_bandwidth
 
