@@ -6,3 +6,4 @@ pytorchyolo/data/vidvrd/images/
 pytorchyolo/data/vidvrd/labels/
 stable_tests/measurements_vidvrd_old/
 dataset/
+dynamic_framework_v2/ckpt/stmarc_full.pth
